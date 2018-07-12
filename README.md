@@ -5,6 +5,8 @@ Get Token from https://developer.clashofclans.com/
 Usage
 ```
 from cocapi import cocapi
-api=cocapi(token)
-api.clan_members("#PU8J2RQ"))
+token = 'YOUR_API_TOKEN';
+timeout=1 #requests timeout 
+api=cocapi(token,timeout)
+api.clan_members("#PU8J2RQ")
 ```
