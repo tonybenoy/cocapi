@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="ClashOfClansAPI",
-    version="0.0.2",
+    name="cocapi",
+    version="1.0.0",
     author="Tony Benoy",
     author_email="me@tonybenoy.com.com",
     description="A python wrapper around clash of clans api",
