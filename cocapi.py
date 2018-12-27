@@ -47,7 +47,17 @@ class cocapi:
     def clan_current_war(self,tag,params=None):
         uri = "/clans/%23"+tag[1:]+"/currentwar"
         return self.api_response(uri,params)
-    
+
+    #Function to Retrieve information about clan's current clan war league group
+    def clan_leaguegroup(self, tag, params=None):
+        uri = "/clans/%23"+tag[1:]+"/currentwar/leaguegroup"
+        return self.api_response(uri, params)
+
+    #Function to Retrieve information about a clan war league war.
+    def warleague(self,sid, params=None):
+        uri = "/clanwarleagues/wars/"+str(sid)
+        return self.api_response(uri, params)
+
     #Function to Get information about a single player by player tag. Player tags can be found either in game or by from clan member lists.
     def players(self,tag,params=None):
         uri = "/players/%23"+tag[1:]
