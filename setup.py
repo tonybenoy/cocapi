@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="cocapi",
-    version="1.0.0",
+    version="1.0.1",
     author="Tony Benoy",
     author_email="me@tonybenoy.com.com",
     description="A python wrapper around clash of clans api",
