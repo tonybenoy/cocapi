@@ -1,1 +1,2 @@
-name = "ClashOfClansAPI"
+name = "cocapi"
+from cocapi.cocapi import CocApi

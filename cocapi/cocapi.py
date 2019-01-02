@@ -1,7 +1,7 @@
 import requests,json
-class cocapi:
+class CocApi:
     #Initialising requisites 
-    def __init__(self,token,timeout):
+    def __init__(self,token,timeout=20):
         self.requests = requests
         self.token = token
         self.endpoint = "https://api.clashofclans.com/v1"
