@@ -85,12 +85,12 @@ class CocApi:
 
     #Function to Get clan versus rankings for a specific location
     def location_clan_versus(self,id,params=None):
-        uri = "/locations/"+str(id)+"/clans-versus"
+        uri = "/locations/"+str(id)+"/rankings/clans-versus"
         return self.api_response(uri,params)
 
     #Function to Get player versus rankings for a specific location
     def location_player_versus(self,id,params=None):
-        uri = "/locations/"+str(id)+"/players-versus"
+        uri = "/locations/"+str(id)+"/rankings/players-versus"
         return self.api_response(uri,params)
 
     #Function to Get list of leagues
