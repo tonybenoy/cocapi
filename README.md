@@ -1,5 +1,5 @@
 # ClashOfClansAPI </br>
-Python Wrapper for SuperCells Clash Of Clan API </br>
+Python Wrapper for SuperCells Clash Of Clans API </br>
 Get Token from https://developer.clashofclans.com/</br>
 
 
