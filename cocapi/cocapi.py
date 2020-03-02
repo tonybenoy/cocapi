@@ -1,4 +1,4 @@
-import requests
+import httpx
 import json
 
 
@@ -18,7 +18,7 @@ class CocApi:
         if params:
             params = json.dumps(params)
         try:
-            response = requests.get(
+            response = httpx.get(
                 url, data=params, headers=self.headers, timeout=self.timeout)
             return response.json()
         except:
@@ -116,4 +116,14 @@ class CocApi:
     # Function to Get league season rankings. Note that league season information is available only for Legend League.
     def league_season_id(self, id, sid, params=None):
         uri = '/leagues/'+str(id)+'/seasons/'+str(sid)
+        return self.api_response(uri, params)
+
+    # Function to Get labels for a clan
+    def labels_clans(self, params=None):
+        uri = '/labels/clans'
+        return self.api_response(uri, params)
+
+    # Function to Get labels for a player
+    def labels_players(self, params=None):
+        uri = '/labels/players/'
         return self.api_response(uri, params)
