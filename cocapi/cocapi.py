@@ -39,7 +39,7 @@ class CocApi:
         try:
             response = httpx.get(
                 url=url, headers=self.headers, timeout=self.timeout)
-            return response.json()
+            return dict(response.json())
         except:
             return {'result': 'error', 'message': 'Something broke'}
 
@@ -128,7 +128,7 @@ class CocApi:
         Function List all available locations
         """
         if not self.check_if_dict_invalid(params=params):
-            return
+            return self.ERROR_INVALID_PARAM
         uri = '/locations'
         return self.api_response(uri=uri, params=params)
 
