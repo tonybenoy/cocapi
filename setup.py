@@ -5,14 +5,14 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="cocapi",
-    version="2.0.0",
+    version="2.0.1",
     author="Tony Benoy",
     author_email="me@tonybenoy.com",
     description="A python wrapper around clash of clans api",
     long_description="A python wrapper around clash of clans api with support for filters",
     long_description_content_type="text/markdown",
     url="https://github.com/tonybenoy/cocapi",
-    install_requires=["requests"],
+    install_requires=["httpx"],
     keywords='Clash of Clans SuperCell API COC',
     packages=setuptools.find_packages(),
     classifiers=(
