@@ -1,5 +1,7 @@
 <p>
-![mypy](https://github.com/tonybenoy/cocapi/workflows/mypy/badge.svg)
+    <a href="https://github.com/tonybenoy/cocapi/actions">
+        <img src="https://github.com/tonybenoy/cocapi/workflows/mypy/badge.svg" alt="Test Status" height="15">
+    </a>
 </p>
 <p>
     <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python version" height="15"></a>
