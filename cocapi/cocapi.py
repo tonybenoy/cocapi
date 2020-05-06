@@ -39,7 +39,7 @@ class CocApi:
             The json response from the api as is or returns error if broken
         """
 
-        url = self.ENDPOINT + uri + "?" + urllib.parse.urlencode(params)
+        url = self.ENDPOINT + uri + "?" + urllib.parse.urlencode(params) # type: ignore
         try:
             response = httpx.get(url=url, headers=self.headers, timeout=self.timeout)
             return dict(response.json())
