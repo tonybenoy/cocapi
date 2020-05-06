@@ -1,6 +1,6 @@
 <p>
     <a href="https://github.com/tonybenoy/cocapi/actions">
-        <img src="https://github.com/RedCarpetUp/ledger/workflows/Tests/badge.svg" alt="Test Status" height="15">
+        <img src="https://github.com/tonybenoy/cocapi/workflows/Tests/badge.svg" alt="Test Status" height="15">
     </a>
 </p>
 <p>
