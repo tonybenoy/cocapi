@@ -2,7 +2,7 @@
     <a href="https://github.com/tonybenoy/cocapi/actions">
         <img src="https://github.com/tonybenoy/cocapi/workflows/mypy/badge.svg" alt="Test Status" height="20">
     </a>
-    <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/v/cocapi" alt="Pypi version" height="17"></a>
+    <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/v/cocapi" alt="Pypi version" height="21"></a>
 </p>
 <p>
     <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.6+-blue.svg" alt="Python version" height="17"></a>
