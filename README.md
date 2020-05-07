@@ -11,16 +11,16 @@
         <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Codestyle Black" height="17">
     </a>
 </p>
-# ClashOfClansAPI </br>
+# ClashOfClansAPI 
 Python Wrapper for SuperCells Clash Of Clans API </br>
 Get Token from https://developer.clashofclans.com/</br>
 
-# Install using pip </br>
+# Install using pip
 
 > pip3 install cocapi
 
 
-# Usage </br>
+# Usage 
 
 ```
 from cocapi import CocApi
