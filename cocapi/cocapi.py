@@ -41,7 +41,7 @@ class CocApi:
         url = self.ENDPOINT + uri + "?" + urllib.parse.urlencode(params)  # type: ignore
         try:
             response = httpx.get(url=url, headers=self.headers, timeout=self.timeout)
-            return Dict(response.json())
+            return dict(response.json())
         except:
             return {"result": "error", "message": "Something broke"}
 

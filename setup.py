@@ -5,8 +5,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="cocapi",
-    version="2.0.2",
+    version="2.0.3",
     author="Tony Benoy",
+    setup_requires=['wheel'],
     author_email="me@tonybenoy.com",
     description="A python wrapper around clash of clans api",
     long_description="A python wrapper around clash of clans api with support for filters",
