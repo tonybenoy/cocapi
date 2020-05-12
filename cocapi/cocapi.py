@@ -1,6 +1,5 @@
-import json
 import urllib
-
+from typing import Dict, Tuple
 import httpx
 
 
@@ -22,12 +21,12 @@ class CocApi:
             "message": "Invalid params for method",
         }
 
-    def check_if_dict_invalid(self, params: dict, valid_items: tuple = ()) -> bool:
+    def check_if_dict_invalid(self, params: Dict, valid_items: Tuple = ()) -> bool:
         if not valid_items:
             valid_items = self.DEFAULT_PARAMS
         return set(params.keys()).issubset(valid_items)
 
-    def api_response(self, uri: str, params: dict = {}) -> dict:
+    def api_response(self, uri: str, params: Dict = {}) -> Dict:
         """
         Function to handle requests,it is possible to use this handler on it's
         own to make request to the api on in case of a new or unsupported api
@@ -39,14 +38,14 @@ class CocApi:
             The json response from the api as is or returns error if broken
         """
 
-        url = self.ENDPOINT + uri + "?" + urllib.parse.urlencode(params) # type: ignore
+        url = self.ENDPOINT + uri + "?" + urllib.parse.urlencode(params)  # type: ignore
         try:
             response = httpx.get(url=url, headers=self.headers, timeout=self.timeout)
-            return dict(response.json())
+            return Dict(response.json())
         except:
             return {"result": "error", "message": "Something broke"}
 
-    def test(self) -> dict:
+    def test(self) -> Dict:
         """
         Function to test if the api is up and running.
             Dictionary with a success if api is up error if false
@@ -57,7 +56,7 @@ class CocApi:
         else:
             return {"result": "error", "message": "Api is Down!"}
 
-    def clan(self, params: dict = {}) -> dict:
+    def clan(self, params: Dict = {}) -> Dict:
         """
         Function to Search all clans by name and/or filtering the results using various criteria.
         At least one filtering criteria must be defined and if name is used as part of search, it
@@ -83,7 +82,7 @@ class CocApi:
         uri = "/clans"
         return self.api_response(uri=uri, params=params)
 
-    def clan_tag(self, tag: str) -> dict:
+    def clan_tag(self, tag: str) -> Dict:
         """
         Function to Get information about a single clan by clan tag.
         Clan tags can be found using clan search operation.
@@ -91,7 +90,7 @@ class CocApi:
         uri = "/clans/%23" + tag[1:]
         return self.api_response(uri=uri)
 
-    def clan_members(self, tag: str, params: dict = {}) -> dict:
+    def clan_members(self, tag: str, params: Dict = {}) -> Dict:
         """
         Function to List clan members
         """
@@ -100,7 +99,7 @@ class CocApi:
         uri = "/clans/%23" + tag[1:] + "/members"
         return self.api_response(uri=uri, params=params)
 
-    def clan_war_log(self, tag: str, params: dict = {}) -> dict:
+    def clan_war_log(self, tag: str, params: Dict = {}) -> Dict:
         """
         Function to Retrieve clan's clan war log
         """
@@ -109,35 +108,35 @@ class CocApi:
         uri = "/clans/%23" + tag[1:] + "/warlog"
         return self.api_response(uri=uri, params=params)
 
-    def clan_current_war(self, tag: str) -> dict:
+    def clan_current_war(self, tag: str) -> Dict:
         """
         Function to Retrieve information about clan's current clan war
         """
         uri = "/clans/%23" + tag[1:] + "/currentwar"
         return self.api_response(uri=uri)
 
-    def clan_leaguegroup(self, tag: str) -> dict:
+    def clan_leaguegroup(self, tag: str) -> Dict:
         """
         Function to Retrieve information about clan's current clan war league group
         """
         uri = "/clans/%23" + tag[1:] + "/currentwar/leaguegroup"
         return self.api_response(uri=uri)
 
-    def warleague(self, sid: str) -> dict:
+    def warleague(self, sid: str) -> Dict:
         """
         Function to Retrieve information about a clan war league war.
         """
         uri = "/clanwarleagues/wars/" + str(sid)
         return self.api_response(uri=uri)
 
-    def players(self, tag: str) -> dict:
+    def players(self, tag: str) -> Dict:
         """
         Function to Get information about a single player by player tag. Player tags can be found either in game or by from clan member lists.
         """
         uri = "/players/%23" + tag[1:]
         return self.api_response(uri=uri)
 
-    def location(self, params: dict = {}) -> dict:
+    def location(self, params: Dict = {}) -> Dict:
         """
         Function List all available locations
         """
@@ -146,14 +145,14 @@ class CocApi:
         uri = "/locations"
         return self.api_response(uri=uri, params=params)
 
-    def location_id(self, id: str) -> dict:
+    def location_id(self, id: str) -> Dict:
         """
         Function to Get information about specific location
         """
         uri = "/locations/" + str(id)
         return self.api_response(uri=uri)
 
-    def location_id_clan_rank(self, id: str, params: dict = {}) -> dict:
+    def location_id_clan_rank(self, id: str, params: Dict = {}) -> Dict:
         """
         Function to Get clan rankings for a specific location
         """
@@ -162,7 +161,7 @@ class CocApi:
         uri = "/locations/" + str(id) + "/rankings/clans"
         return self.api_response(uri=uri, params=params)
 
-    def location_id_player_rank(self, id: str, params: dict = {}) -> dict:
+    def location_id_player_rank(self, id: str, params: Dict = {}) -> Dict:
         """
         Function to Get player rankings for a specific location
         """
@@ -171,7 +170,7 @@ class CocApi:
         uri = "/locations/" + str(id) + "/rankings/players"
         return self.api_response(uri=uri, params=params)
 
-    def location_clan_versus(self, id: str, params: dict = {}) -> dict:
+    def location_clan_versus(self, id: str, params: Dict = {}) -> Dict:
         """
         Function to Get clan versus rankings for a specific location
         """
@@ -181,7 +180,7 @@ class CocApi:
         uri = "/locations/" + str(id) + "/rankings/clans-versus"
         return self.api_response(uri=uri, params=params)
 
-    def location_player_versus(self, id: str, params: dict = {}) -> dict:
+    def location_player_versus(self, id: str, params: Dict = {}) -> Dict:
         """
         Function to Get player versus rankings for a specific location
         """
@@ -190,7 +189,7 @@ class CocApi:
         uri = "/locations/" + str(id) + "/rankings/players-versus"
         return self.api_response(uri=uri, params=params)
 
-    def league(self, params: dict = {}) -> dict:
+    def league(self, params: Dict = {}) -> Dict:
         """
         Function to Get list of leagues
         """
@@ -199,14 +198,14 @@ class CocApi:
         uri = "/leagues"
         return self.api_response(uri=uri, params=params)
 
-    def league_id(self, id: str) -> dict:
+    def league_id(self, id: str) -> Dict:
         """
         Function to Get league information
         """
         uri = "/leagues/" + str(id)
         return self.api_response(uri=uri)
 
-    def league_season(self, id: str, params: dict = {}) -> dict:
+    def league_season(self, id: str, params: Dict = {}) -> Dict:
         """
         Function to Get league seasons. Note that league season information is available only for Legend League.
         """
@@ -215,7 +214,7 @@ class CocApi:
         uri = "/leagues/" + str(id) + "/seasons"
         return self.api_response(uri=uri, params=params)
 
-    def league_season_id(self, id: str, sid: str, params: dict = {}) -> dict:
+    def league_season_id(self, id: str, sid: str, params: Dict = {}) -> Dict:
         """
         Function to Get league season rankings. Note that league season information is available only for Legend League.
         """
@@ -224,7 +223,7 @@ class CocApi:
         uri = "/leagues/" + str(id) + "/seasons/" + str(sid)
         return self.api_response(uri=uri, params=params)
 
-    def labels_clans(self, params: dict = {}) -> dict:
+    def labels_clans(self, params: Dict = {}) -> Dict:
         """
         Function to Get labels for a clan
         """
@@ -233,7 +232,7 @@ class CocApi:
         uri = "/labels/clans"
         return self.api_response(uri=uri, params=params)
 
-    def labels_players(self, params: dict = {}) -> dict:
+    def labels_players(self, params: Dict = {}) -> Dict:
         """
         Function to Get labels for a player
         """
