@@ -38,12 +38,13 @@ timeout=1 #requests timeout
 api=CocApi(token,timeout)
 ```
 
-### Get all information about a clan
+
+## Clans
+
+### Information about a Clan
 ```python
 api.clan_tag(tag) #example tag "#9UOVJJ9J"
 ```
-returns various clan information
-
 ```text
 {
   "warLeague": {
@@ -101,17 +102,16 @@ returns various clan information
   "badgeUrls": {}
 }
 ```
-#### Members only
+#### Members Only
 ```python
 api.clan_members(tag)
 ```
 returns membersList information from api.clan_tag(tag) under "items" in dict
 
-### War Log
+### War Log Information
 ```python
 api.clan_war_log(tag)
 ```
-returns clan war log under "items" in dict
 
 ```text
 {items:
@@ -195,7 +195,8 @@ returns clan war log under "items" in dict
 "paging": {'cursors': {}}
 }
 ```
-### Get best move
+
+### Current War Information
 ```python
 api.clan_current_war(tag)
 ```
@@ -278,5 +279,441 @@ api.clan_current_war(tag)
   "preparationStartTime": "string"
 }
 ```
+
+### Clan League Group Information
+```python
+api.clan_leaguegroup(tag)
+```
+```text
+{
+  "tag": "string",
+  "state": "string",
+  "season": "string",
+  "clans": [
+    {
+      "tag": "string",
+      "clanLevel": 0,
+      "name": "string",
+      "members": [
+        {
+          "tag": "string",
+          "townHallLevel": 0,
+          "name": "string"
+        }
+      ],
+      "badgeUrls": {}
+    }
+  ],
+  "rounds": [
+    {
+      "warTags": [
+        "string"
+      ]
+    }
+  ]
+}
+```
+
+### Warleague Information
+```python
+api.clan_warleague(war_tag)
+```
+```text
+{
+  "tag": "string",
+  "state": "string",
+  "season": "string",
+  "clans": [
+    {
+      "tag": "string",
+      "clanLevel": 0,
+      "name": "string",
+      "members": [
+        {
+          "tag": "string",
+          "townHallLevel": 0,
+          "name": "string"
+        }
+      ],
+      "badgeUrls": {}
+    }
+  ],
+  "rounds": [
+    {
+      "warTags": [
+        "string"
+      ]
+    }
+  ]
+}
+```
+
+## Player
+
+### Player information
+```python
+api.players(player_tag) #for example "#900PUCPV"
+```
+```text
+{
+  "clan": {
+    "tag": "string",
+    "clanLevel": 0,
+    "name": "string",
+    "badgeUrls": {}
+  },
+  "league": {
+    "name": {},
+    "id": 0,
+    "iconUrls": {}
+  },
+  "townHallWeaponLevel": 0,
+  "versusBattleWins": 0,
+  "legendStatistics": {
+    "previousSeason": {
+      "trophies": 0,
+      "id": "string",
+      "rank": 0
+    },
+    "previousVersusSeason": {
+      "trophies": 0,
+      "id": "string",
+      "rank": 0
+    },
+    "bestVersusSeason": {
+      "trophies": 0,
+      "id": "string",
+      "rank": 0
+    },
+    "legendTrophies": 0,
+    "currentSeason": {
+      "trophies": 0,
+      "id": "string",
+      "rank": 0
+    },
+    "bestSeason": {
+      "trophies": 0,
+      "id": "string",
+      "rank": 0
+    }
+  },
+  "troops": [
+    {
+      "level": 0,
+      "name": {},
+      "maxLevel": 0,
+      "village": "string"
+    }
+  ],
+  "heroes": [
+    {
+      "level": 0,
+      "name": {},
+      "maxLevel": 0,
+      "village": "string"
+    }
+  ],
+  "spells": [
+    {
+      "level": 0,
+      "name": {},
+      "maxLevel": 0,
+      "village": "string"
+    }
+  ],
+  "role": "string",
+  "attackWins": 0,
+  "defenseWins": 0,
+  "townHallLevel": 0,
+  "labels": [
+    {
+      "name": {},
+      "id": 0,
+      "iconUrls": {}
+    }
+  ],
+  "tag": "string",
+  "name": "string",
+  "expLevel": 0,
+  "trophies": 0,
+  "bestTrophies": 0,
+  "donations": 0,
+  "donationsReceived": 0,
+  "builderHallLevel": 0,
+  "versusTrophies": 0,
+  "bestVersusTrophies": 0,
+  "warStars": 0,
+  "achievements": [
+    {
+      "stars": 0,
+      "value": 0,
+      "name": {},
+      "target": 0,
+      "info": {},
+      "completionInfo": {},
+      "village": "string"
+    }
+  ],
+  "versusBattleWinCount": 0
+}
+```
+
+## Locations
+
+### All Locations Information
+```python
+api.location()
+```
+```text
+{"items":
+[
+  {
+    "localizedName": "string",
+    "id": 0,
+    "name": "string",
+    "isCountry": true,
+    "countryCode": "string"
+  }
+],
+"paging": {'cursors': {}}
+}
+```
+
+## Information for a Signle Lcoation
+```python
+api.location_id(location_tag) #for example "32000047"
+```
+
+returns the above information for a single location
+
+### Top Clans in a Location
+```python
+api.location_id_clan_rank(location_tag)
+```
+Top 200 clans in a given location
+```text
+{"items":
+[
+  {
+    "clanLevel": 0,
+    "clanPoints": 0,
+    "location": {
+      "localizedName": "string",
+      "id": 0,
+      "name": "string",
+      "isCountry": true,
+      "countryCode": "string"
+    },
+    "members": 0,
+    "tag": "string",
+    "name": "string",
+    "rank": 0,
+    "previousRank": 0,
+    "badgeUrls": {}
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+### Top Players in a Location
+```python
+api.clan_leaguegroup(location_tag)
+```
+Top 200 players in a given location
+```text
+{"items":
+[
+  {
+    "clan": {
+      "tag": "string",
+      "name": "string",
+      "badgeUrls": {}
+    },
+    "league": {
+      "name": {},
+      "id": 0,
+      "iconUrls": {}
+    },
+    "attackWins": 0,
+    "defenseWins": 0,
+    "tag": "string",
+    "name": "string",
+    "expLevel": 0,
+    "rank": 0,
+    "previousRank": 0,
+    "trophies": 0
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+
+### Top Versus Clans in a Location
+```python
+api.location_clan_versus(location_tag)
+```
+Top 200 versus clans in a given location
+```text
+{"items":
+[
+  {
+    "clanPoints": 0,
+    "clanVersusPoints": 0
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+
+### Top Versus Players in a Location
+```python
+api.location_player_versus(location_tag)
+```
+Top 200 versus players in a given location
+```text
+{"items":
+[
+  {
+    "clan": {
+      "tag": "string",
+      "name": "string",
+      "badgeUrls": {}
+    },
+    "versusBattleWins": 0,
+    "tag": "string",
+    "name": "string",
+    "expLevel": 0,
+    "rank": 0,
+    "previousRank": 0,
+    "versusTrophies": 0
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+
+### List leagues
+```python
+api.league()
+```
+
+```text
+{"items":
+[
+  {
+    "name": {},
+    "id": 0,
+    "iconUrls": {}
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+
+### League Information
+```python
+api.league_id(league_tag)
+```
+```text
+{
+  "name": {},
+  "id": 0,
+  "iconUrls": {}
+}
+```
+
+
+### List Season Leagues
+```python
+api.league_season(league_tag)
+```
+Information is available only for Legend League
+```text
+{"items":
+[
+  {
+    "id": "string"
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+
+### League Season Ranking
+```python
+api.league_season_id(league_tag, season_tag)
+```
+Information is available only for Legend League
+```text
+{"items":
+[
+  {
+    "clan": {
+      "tag": "string",
+      "name": "string",
+      "badgeUrls": {}
+    },
+    "league": {
+      "name": {},
+      "id": 0,
+      "iconUrls": {}
+    },
+    "attackWins": 0,
+    "defenseWins": 0,
+    "tag": "string",
+    "name": "string",
+    "expLevel": 0,
+    "rank": 0,
+    "previousRank": 0,
+    "trophies": 0
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+
+### List Clan Labels
+```python
+api.clan_leaguegroup(tag)
+```
+```text
+{"items":
+[
+  {
+    "name": {},
+    "id": 0,
+    "iconUrls": {}
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
+
+### List Player Labels
+```python
+api.labels_players()
+```
+
+```text
+{"items":
+[
+  {
+    "name": {},
+    "id": 0,
+    "iconUrls": {}
+  }
+], 
+"paging": {'cursors': {}}
+}
+```
+
 
 *Note versions below 2.0.0 are not supported anymore*
