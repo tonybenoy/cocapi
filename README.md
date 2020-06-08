@@ -37,6 +37,8 @@ api=CocApi(token,timeout)
 ```
 
 
+
+
 ## Clans
 
 ### Information about a Clan
@@ -366,6 +368,9 @@ api.clan_warleague(war_tag)
 ```
 </details>
 
+
+
+
 ## Player
 
 ### Player information
@@ -480,6 +485,9 @@ api.players(player_tag) #for example "#900PUCPV"
 ```
 </details>
 
+
+
+
 ## Locations
 
 ### All Locations Information
@@ -505,7 +513,7 @@ api.location()
 ```
 </details>
 
-## Information for a Signle Lcoation
+### Information for a Single Location
 ```python
 api.location_id(location_tag) #for example "32000047"
 ```
@@ -638,6 +646,10 @@ Top 200 versus players in a given location
 </details>
 
 
+
+
+## Leagues
+
 ### List leagues
 ```python
 api.league()
@@ -735,6 +747,10 @@ Information is available only for Legend League
 ```
 </details>
 
+
+
+
+## Labels
 
 ### List Clan Labels
 ```python
