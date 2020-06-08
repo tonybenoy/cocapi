@@ -43,9 +43,8 @@ api=CocApi(token,timeout)
 ```python
 api.clan_tag(tag) #example tag "#9UOVJJ9J"
 ```
-
 <details>
- <summary>Testing</summary>
+ <summary>Click to view output</summary>
 
 ```text
 {
@@ -116,7 +115,9 @@ returns membersList information from api.clan_tag(tag) under "items" in dict
 ```python
 api.clan_war_log(tag)
 ```
-
+<details>
+ <summary>Click to view output</summary>
+ 
 ```text
 {items:
 [
@@ -199,11 +200,15 @@ api.clan_war_log(tag)
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 ### Current War Information
 ```python
 api.clan_current_war(tag)
 ```
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {
   "clan": {
@@ -283,11 +288,15 @@ api.clan_current_war(tag)
   "preparationStartTime": "string"
 }
 ```
+</details>
 
 ### Clan League Group Information
 ```python
 api.clan_leaguegroup(tag)
 ```
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {
   "tag": "string",
@@ -317,11 +326,15 @@ api.clan_leaguegroup(tag)
   ]
 }
 ```
+</details>
 
 ### Warleague Information
 ```python
 api.clan_warleague(war_tag)
 ```
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {
   "tag": "string",
@@ -351,6 +364,7 @@ api.clan_warleague(war_tag)
   ]
 }
 ```
+</details>
 
 ## Player
 
@@ -358,6 +372,9 @@ api.clan_warleague(war_tag)
 ```python
 api.players(player_tag) #for example "#900PUCPV"
 ```
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {
   "clan": {
@@ -461,6 +478,7 @@ api.players(player_tag) #for example "#900PUCPV"
   "versusBattleWinCount": 0
 }
 ```
+</details>
 
 ## Locations
 
@@ -468,6 +486,9 @@ api.players(player_tag) #for example "#900PUCPV"
 ```python
 api.location()
 ```
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -482,6 +503,7 @@ api.location()
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 ## Information for a Signle Lcoation
 ```python
@@ -495,6 +517,9 @@ returns the above information for a single location
 api.location_id_clan_rank(location_tag)
 ```
 Top 200 clans in a given location
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -519,12 +544,16 @@ Top 200 clans in a given location
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 ### Top Players in a Location
 ```python
 api.clan_leaguegroup(location_tag)
 ```
 Top 200 players in a given location
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -552,6 +581,7 @@ Top 200 players in a given location
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ### Top Versus Clans in a Location
@@ -559,6 +589,9 @@ Top 200 players in a given location
 api.location_clan_versus(location_tag)
 ```
 Top 200 versus clans in a given location
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -570,6 +603,7 @@ Top 200 versus clans in a given location
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ### Top Versus Players in a Location
@@ -577,6 +611,9 @@ Top 200 versus clans in a given location
 api.location_player_versus(location_tag)
 ```
 Top 200 versus players in a given location
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -598,12 +635,15 @@ Top 200 versus players in a given location
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ### List leagues
 ```python
 api.league()
 ```
+<details>
+ <summary>Click to view output</summary>
 
 ```text
 {"items":
@@ -617,12 +657,16 @@ api.league()
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ### League Information
 ```python
 api.league_id(league_tag)
 ```
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {
   "name": {},
@@ -630,6 +674,7 @@ api.league_id(league_tag)
   "iconUrls": {}
 }
 ```
+</details>
 
 
 ### List Season Leagues
@@ -637,6 +682,9 @@ api.league_id(league_tag)
 api.league_season(league_tag)
 ```
 Information is available only for Legend League
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -647,6 +695,7 @@ Information is available only for Legend League
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ### League Season Ranking
@@ -654,6 +703,9 @@ Information is available only for Legend League
 api.league_season_id(league_tag, season_tag)
 ```
 Information is available only for Legend League
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -681,12 +733,16 @@ Information is available only for Legend League
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ### List Clan Labels
 ```python
 api.clan_leaguegroup(tag)
 ```
+<details>
+ <summary>Click to view output</summary>
+
 ```text
 {"items":
 [
@@ -699,12 +755,15 @@ api.clan_leaguegroup(tag)
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ### List Player Labels
 ```python
 api.labels_players()
 ```
+<details>
+ <summary>Click to view output</summary>
 
 ```text
 {"items":
@@ -718,6 +777,7 @@ api.labels_players()
 "paging": {'cursors': {}}
 }
 ```
+</details>
 
 
 ## Credits
