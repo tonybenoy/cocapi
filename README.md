@@ -43,6 +43,10 @@ api=CocApi(token,timeout)
 ```python
 api.clan_tag(tag) #example tag "#9UOVJJ9J"
 ```
+
+<details>
+ <summary>Testing</summary>
+
 ```text
 {
   "warLeague": {
@@ -100,6 +104,8 @@ api.clan_tag(tag) #example tag "#9UOVJJ9J"
   "badgeUrls": {}
 }
 ```
+</details>
+
 #### Members Only
 ```python
 api.clan_members(tag)
