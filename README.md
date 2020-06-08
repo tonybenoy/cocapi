@@ -21,9 +21,7 @@ Get Token from https://developer.clashofclans.com/</br>
 > pip3 install cocapi
 
 
-# Usage </br>
-
-## Features and usage examples
+# Features and usage examples
 
 ### Initialize
 
@@ -715,5 +713,9 @@ api.labels_players()
 }
 ```
 
+
+## Credits
+- [Tony Benoy](https://github.com/tonybenoy)
+- [All Contributors](../../contributors)
 
 *Note versions below 2.0.0 are not supported anymore*
