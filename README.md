@@ -799,7 +799,8 @@ api.labels_players()
 
 
 ## Credits
-- [Tony Benoy](https://github.com/tonybenoy)
 - [All Contributors](../../contributors)
 
 *Note versions below 2.0.0 are not supported anymore*
+
+*DISCLAIMER: cocapi is not affiliated with SuperCell©.
