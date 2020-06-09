@@ -12,9 +12,11 @@
     </a>
 </p>
 
-# ClashOfClansAPI </br>
-Python Wrapper for SuperCells Clash Of Clans API </br>
-Get Token from https://developer.clashofclans.com/</br>
+# ClashOfClansAPI 
+
+Python Wrapper for SuperCells Clash Of Clans API
+
+Get Token from https://developer.clashofclans.com/
 
 # Install
 
@@ -797,7 +799,8 @@ api.labels_players()
 
 
 ## Credits
-- [Tony Benoy](https://github.com/tonybenoy)
 - [All Contributors](../../contributors)
 
 *Note versions below 2.0.0 are not supported anymore*
+
+*DISCLAIMER: cocapi is not affiliated with SuperCell©.
