@@ -12,9 +12,11 @@
     </a>
 </p>
 
-# ClashOfClansAPI </br>
-Python Wrapper for SuperCells Clash Of Clans API </br>
-Get Token from https://developer.clashofclans.com/</br>
+# ClashOfClansAPI 
+
+Python Wrapper for SuperCells Clash Of Clans API
+
+Get Token from https://developer.clashofclans.com/
 
 # Install
 
