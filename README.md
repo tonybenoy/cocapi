@@ -20,7 +20,7 @@ Get Token from https://developer.clashofclans.com/
 
 # Install
 
-> pip3 install cocapi
+> pip install cocapi
 
 
 # Features and usage examples
