@@ -10,7 +10,7 @@ setuptools.setup(
     setup_requires=['wheel'],
     author_email="me@tonybenoy.com",
     description="A python wrapper around clash of clans api",
-    long_description="A python wrapper around clash of clans api with support for filters",
+    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/tonybenoy/cocapi",
     install_requires=["httpx"],
