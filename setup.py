@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="cocapi",
-    version="2.0.4",
+    version="2.0.6",
     author="Tony Benoy",
     setup_requires=['wheel'],
     author_email="me@tonybenoy.com",
