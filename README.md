@@ -334,7 +334,7 @@ api.clan_leaguegroup(tag)
 
 ### Warleague Information
 ```python
-api.clan_warleague(war_tag)
+api.warleague(war_tag)
 ```
 <details>
  <summary>Click to view output</summary>
