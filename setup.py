@@ -7,7 +7,7 @@ setuptools.setup(
     name="cocapi",
     version="2.0.6",
     author="Tony Benoy",
-    setup_requires=['wheel'],
+    setup_requires=["wheel"],
     author_email="me@tonybenoy.com",
     description="A python wrapper around clash of clans api",
     long_description=long_description,
@@ -21,5 +21,5 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Operating System :: OS Independent",
     ),
-    extras_require={"dev": ["black", "pylint", "mypy",]},
+    extras_require={"dev": ["black", "pylint", "mypy", "isort"]},
 )
