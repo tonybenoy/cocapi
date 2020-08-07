@@ -2,7 +2,7 @@ import urllib
 from typing import Dict, Tuple
 
 import httpx
-
+import test
 
 class CocApi:
     def __init__(self, token: str, timeout: int = 20):

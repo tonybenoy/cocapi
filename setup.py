@@ -9,7 +9,7 @@ setuptools.setup(
     author="Tony Benoy",
     setup_requires=["wheel"],
     author_email="me@tonybenoy.com",
-    description="A python wrapper around clash of clans api",
+    description="A python wrapper around clash ofdsfsfdsfsfsdfsdfsdfsdfsdfsdfsdfsdfsdfsdfsdfsdf clans api",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/tonybenoy/cocapi",
