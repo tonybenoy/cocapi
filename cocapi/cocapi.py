@@ -13,7 +13,7 @@ class CocApi:
         self.ENDPOINT = "https://api.clashofclans.com/v1"
         self.timeout = timeout
         self.headers = {
-            "authorization": "Bearer %s" % token,
+            "authorization": f"Bearer {token}",
             "Accept": "application/json",
         }
         self.DEFAULT_PARAMS = ("limit", "after", "before")
@@ -235,6 +235,22 @@ class CocApi:
             uri=f"/leagues/{str(id)}/seasons/{str(sid)}", params=params
         )
 
+    def warleagues(self) -> Dict:
+        """
+        Function to Get list of clan war leagues
+        """
+        return self.__api_response(
+            uri="/warleagues",
+        )
+
+    def warleagues_id(self, league_id: str) -> Dict:
+        """
+        Function to Get information about a clan war league
+        """
+        return self.__api_response(
+            uri=f"/warleagues/{str(league_id)}",
+        )
+
     def labels_clans(self, params: Dict = {}) -> Dict:
         """
         Function to Get labels for a clan
@@ -250,3 +266,30 @@ class CocApi:
         if not self.__check_if_dict_invalid(params=params):
             return self.ERROR_INVALID_PARAM
         return self.__api_response(uri="/labels/players/", params=params)
+
+    def goldpass_seasons_current(self) -> Dict:
+        """
+        Function to Get current gold pass season
+        """
+        return self.__api_response(uri="/goldpass/seasons/current")
+
+    def player_verifytoken(self, token: str, player_tag: str) -> Dict:
+        """
+        Function to Verify player token
+        """
+        response = httpx.post(
+            url=f"{self.ENDPOINT}/players/%23{player_tag[1:]}/verifytoken",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            },
+            data={"token": token},
+        )
+        try:
+            return dict(response.json())
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": "Something broke",
+                "exception": str(e),
+            }
