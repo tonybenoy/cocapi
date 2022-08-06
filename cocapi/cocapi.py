@@ -21,6 +21,9 @@ class CocApi:
             "result": "error",
             "message": "Invalid params for method",
         }
+        test_reponse = self.test()
+        if test_reponse.get("result") == "error":
+            raise Exception(test_reponse.get("message"))
 
     def __check_if_dict_invalid(self, params: Dict, valid_items: Tuple = ()) -> bool:
         valid_items = self.DEFAULT_PARAMS if not valid_items else valid_items
@@ -57,8 +60,16 @@ class CocApi:
         response = httpx.get(url=self.ENDPOINT, headers=self.headers)
         if response.status_code == 200:
             return {"result": "success", "message": "Api is up and running!"}
+        elif response.status_code == 403:
+            return {
+                "result": "error",
+                "message": "Invalid token",
+            }
         else:
-            return {"result": "error", "message": "Api is Down!"}
+            return {
+                "result": "error",
+                "message": "Api is Down!",
+            }
 
     def clan(self, params: Dict = {}) -> Dict:
         """
