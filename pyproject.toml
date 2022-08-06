@@ -48,3 +48,5 @@ line_length = 88
 skip_glob = ['venv']
 ensure_newline_before_comments=true
 skip_gitignore = true
+[flake8]
+max-line-length = 88
