@@ -9,16 +9,16 @@ license = "GNU GENERAL PUBLIC LICENSE"
 python = "^3.7.2"
 httpx = "^0.23.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
 pylint = "^2.14.5"
 mypy = "^0.971"
 isort = "^5.10.1"
-
+pre-commit = "^2.20.0"
+ruff = "^0.0.277"
 # [build-system]
 # requires = ["poetry-core>=1.0.0"]
 # build-backend = "poetry.core.masonry.api"
-pre-commit = "^2.20.0"
 [build-system]
 requires = ["setuptools", "wheel"]
 [tool.black]

@@ -1,11 +1,11 @@
 import urllib
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 import httpx
 
 
 class CocApi:
-    def __init__(self, token: str, timeout: int = 20):
+    def __init__(self, token: str, timeout: int = 20, status_code: bool = False):
         """
         Initialising requisites
         """
@@ -16,6 +16,7 @@ class CocApi:
             "authorization": f"Bearer {token}",
             "Accept": "application/json",
         }
+        self.status_code = status_code
         self.DEFAULT_PARAMS = ("limit", "after", "before")
         self.ERROR_INVALID_PARAM = {
             "result": "error",
@@ -29,7 +30,9 @@ class CocApi:
         valid_items = self.DEFAULT_PARAMS if not valid_items else valid_items
         return set(params.keys()).issubset(valid_items)
 
-    def __api_response(self, uri: str, params: Dict = {}) -> Dict:
+    def __api_response(
+        self, uri: str, params: Dict = {}, status_code: bool = False
+    ) -> Dict:
         """
         Function to handle requests,it is possible to use this handler on it's
         own to make request to the api on in case of a new or unsupported api
@@ -40,11 +43,15 @@ class CocApi:
         Return:
             The json response from the api as is or returns error if broken
         """
-
         url = f"{self.ENDPOINT}{uri}?{urllib.parse.urlencode(params)}"  # type: ignore
         try:
             response = httpx.get(url=url, headers=self.headers, timeout=self.timeout)
-            return dict(response.json())
+            response_json = response.json()
+            if status_code or self.status_code:
+                response_json = dict(
+                    response_json.update({"status_code": response.status_code})
+                )
+            return dict(response_json)
         except Exception as e:
             return {
                 "result": "error",
@@ -52,7 +59,7 @@ class CocApi:
                 "exception": str(e),
             }
 
-    def test(self) -> Dict:
+    def test(self) -> Dict[str, Any]:
         """
         Function to test if the api is up and running.
             Dictionary with a success if api is up error if false
@@ -66,10 +73,13 @@ class CocApi:
                 "message": "Invalid token",
             }
         else:
-            return {
+            response_json = {
                 "result": "error",
                 "message": "Api is Down!",
             }
+            if self.status_code:
+                response_json.update({"status_code": response.status_code})  # type: ignore
+            return response_json
 
     def clan(self, params: Dict = {}) -> Dict:
         """
