@@ -1,5 +1,6 @@
 import urllib
 from typing import Any, Dict, Tuple
+from warnings import warn
 
 import httpx
 
@@ -81,6 +82,26 @@ class CocApi:
                 response_json.update({"status_code": response.status_code})  # type: ignore
             return response_json
 
+    def clan_leaguegroup(self, tag: str) -> Dict:
+        """
+        Function to Retrieve information about clan's current clan war league group
+        """
+        return self.__api_response(uri=f"/clans/%23{tag[1:]}/currentwar/leaguegroup")
+
+    def warleague(self, sid: str) -> Dict:
+        """
+        Function to Retrieve information about a clan war league war.
+        """
+        return self.__api_response(uri=f"/clanwarleagues/wars/{str(sid)}")
+
+    def clan_war_log(self, tag: str, params: Dict = {}) -> Dict:
+        """
+        Function to Retrieve clan's clan war log
+        """
+        if not self.__check_if_dict_invalid(params=params):
+            return self.ERROR_INVALID_PARAM
+        return self.__api_response(uri=f"/clans/%23{tag[1:]}/warlog", params=params)
+
     def clan(self, params: Dict = {}) -> Dict:
         """
         Function to Search all clans by name and/or filtering the results using
@@ -107,6 +128,12 @@ class CocApi:
             return self.ERROR_INVALID_PARAM
         return self.__api_response(uri="/clans", params=params)
 
+    def clan_current_war(self, tag: str) -> Dict:
+        """
+        Function to Retrieve information about clan's current clan war
+        """
+        return self.__api_response(uri=f"/clans/%23{tag[1:]}/currentwar")
+
     def clan_tag(self, tag: str) -> Dict:
         """
         Function to Get information about a single clan by clan tag.
@@ -122,31 +149,15 @@ class CocApi:
             return self.ERROR_INVALID_PARAM
         return self.__api_response(uri=f"/clans/%23{tag[1:]}/members", params=params)
 
-    def clan_war_log(self, tag: str, params: Dict = {}) -> Dict:
-        """
-        Function to Retrieve clan's clan war log
-        """
-        if not self.__check_if_dict_invalid(params=params):
-            return self.ERROR_INVALID_PARAM
-        return self.__api_response(uri=f"/clans/%23{tag[1:]}/warlog", params=params)
-
-    def clan_current_war(self, tag: str) -> Dict:
+    def clan_capitalraidseasons(self, tag: str, params: Dict = {}) -> Dict:
         """
         Function to Retrieve information about clan's current clan war
         """
-        return self.__api_response(uri=f"/clans/%23{tag[1:]}/currentwar")
-
-    def clan_leaguegroup(self, tag: str) -> Dict:
-        """
-        Function to Retrieve information about clan's current clan war league group
-        """
-        return self.__api_response(uri=f"/clans/%23{tag[1:]}/currentwar/leaguegroup")
-
-    def warleague(self, sid: str) -> Dict:
-        """
-        Function to Retrieve information about a clan war league war.
-        """
-        return self.__api_response(uri=f"/clanwarleagues/wars/{str(sid)}")
+        if not self.__check_if_dict_invalid(params=params):
+            return self.ERROR_INVALID_PARAM
+        return self.__api_response(
+            uri=f"/clans/%23{tag[1:]}/currentwar/capitalraidseasons", params=params
+        )
 
     def players(self, tag: str) -> Dict:
         """
@@ -155,19 +166,11 @@ class CocApi:
         """
         return self.__api_response(uri=f"/players/%23{tag[1:]}")
 
-    def location(self, params: Dict = {}) -> Dict:
+    def player_verifytoken(self, tag: str, token: str) -> Dict:
         """
-        Function List all available locations
+        Function to Verify player API token
         """
-        if not self.__check_if_dict_invalid(params=params):
-            return self.ERROR_INVALID_PARAM
-        return self.__api_response(uri="/locations", params=params)
-
-    def location_id(self, id: str) -> Dict:
-        """
-        Function to Get information about specific location
-        """
-        return self.__api_response(uri=f"/locations/{str(id)}")
+        pass
 
     def location_id_clan_rank(self, id: str, params: Dict = {}) -> Dict:
         """
@@ -193,7 +196,11 @@ class CocApi:
         """
         Function to Get clan versus rankings for a specific location
         """
-
+        warn(
+            "This end will be deprecated in the future.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self.__check_if_dict_invalid(params=params):
             return self.ERROR_INVALID_PARAM
 
@@ -201,15 +208,82 @@ class CocApi:
             uri=f"/locations/{str(id)}/rankings/clans-versus", params=params
         )
 
+    def location_players_builder_base(self, id: str, params: Dict = {}) -> Dict:
+        """
+        Function to Get player builder base rankings for a specific location
+        """
+
+        if not self.__check_if_dict_invalid(params=params):
+            return self.ERROR_INVALID_PARAM
+
+        return self.__api_response(
+            uri=f"/locations/{str(id)}/rankings/players-builder-base", params=params
+        )
+
+    def location_clans_builder_base(self, id: str, params: Dict = {}) -> Dict:
+        """
+        Function to Get clan builder base rankings for a specific location
+        """
+
+        if not self.__check_if_dict_invalid(params=params):
+            return self.ERROR_INVALID_PARAM
+
+        return self.__api_response(
+            uri=f"/locations/{str(id)}/rankings/clans-builder-base", params=params
+        )
+
     def location_player_versus(self, id: str, params: Dict = {}) -> Dict:
         """
         Function to Get player versus rankings for a specific location
         """
+        warn(
+            "This end will be deprecated in the future.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self.__check_if_dict_invalid(params=params):
             return self.ERROR_INVALID_PARAM
         return self.__api_response(
             uri=f"/locations/{str(id)}/rankings/players-versus", params=params
         )
+
+    def location(self, params: Dict = {}) -> Dict:
+        """
+        Function List all available locations
+        Will be depricated in the future in favour of locations
+
+        """
+        warn(
+            "This method will be deprecated in the future in favour of locations to maintain \
+                  parity with original api",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.locations(params=params)
+
+    def locations(self, params: Dict = {}) -> Dict:
+        """
+        Function to List all available locations
+        """
+        if not self.__check_if_dict_invalid(params=params):
+            return self.ERROR_INVALID_PARAM
+        return self.__api_response(uri="/locations", params=params)
+
+    def location_rankings_capitals(self, id: str, params: Dict = {}) -> Dict:
+        """
+        Function to Get capital rankings for a specific location
+        """
+        if not self.__check_if_dict_invalid(params=params):
+            return self.ERROR_INVALID_PARAM
+        return self.__api_response(
+            uri=f"/locations/{str(id)}/rankings/capitals", params=params
+        )
+
+    def location_id(self, id: str) -> Dict:
+        """
+        Function to Get information about specific location
+        """
+        return self.__api_response(uri=f"/locations/{str(id)}")
 
     def league(self, params: Dict = {}) -> Dict:
         """
