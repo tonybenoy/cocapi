@@ -35,7 +35,6 @@ files = [
 
 [package.dependencies]
 lazy-object-proxy = ">=1.4.0"
-setuptools = ">=20.0"
 typed-ast = {version = ">=1.4.0,<2.0", markers = "implementation_name == \"cpython\" and python_version < \"3.8\""}
 typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.11\""}
 wrapt = [
@@ -827,4 +826,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7.2"
-content-hash = "227838812f4e99a991578667d89be170616434967ee27c146390759836d91a17"
+content-hash = "9fef1f682d42bd40d8d3307fdf3177b239cc366b4c2d5dc41c06b48016d1ef6d"

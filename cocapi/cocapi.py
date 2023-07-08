@@ -79,7 +79,9 @@ class CocApi:
                 "message": "Api is Down!",
             }
             if self.status_code:
-                response_json.update({"status_code": response.status_code})  # type: ignore
+                response_json.update(
+                    {"status_code": response.status_code}
+                )  # type: ignore
             return response_json
 
     def clan_leaguegroup(self, tag: str) -> Dict:
@@ -166,12 +168,6 @@ class CocApi:
         """
         return self.__api_response(uri=f"/players/%23{tag[1:]}")
 
-    def player_verifytoken(self, tag: str, token: str) -> Dict:
-        """
-        Function to Verify player API token
-        """
-        pass
-
     def location_id_clan_rank(self, id: str, params: Dict = {}) -> Dict:
         """
         Function to Get clan rankings for a specific location
@@ -254,8 +250,9 @@ class CocApi:
 
         """
         warn(
-            "This method will be deprecated in the future in favour of locations to maintain \
-                  parity with original api",
+            "This method will be \
+            deprecated in the future in favour\
+            of locations to maintain parity with original api",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -361,16 +358,21 @@ class CocApi:
         """
         Function to Verify player token
         """
-        response = httpx.post(
-            url=f"{self.ENDPOINT}/players/%23{player_tag[1:]}/verifytoken",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/json",
-            },
-            data={"token": token},
-        )
+
         try:
-            return dict(response.json())
+            response = httpx.post(
+                url=f"{self.ENDPOINT}/players/%23{player_tag[1:]}/verifytoken",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/json",
+                },
+                data={"token": token},
+            )
+            response_json = dict(response.json())
+
+            if self.status_code:
+                response_json = dict(response_json, status_code=response.status_code)
+            return response_json
         except Exception as e:
             return {
                 "status": "error",
