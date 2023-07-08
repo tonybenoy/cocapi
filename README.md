@@ -12,7 +12,7 @@
     </a>
 </p>
 
-# ClashOfClansAPI 
+# ClashOfClansAPI
 
 Python Wrapper for SuperCells Clash Of Clans API
 
@@ -27,13 +27,13 @@ Get Token from https://developer.clashofclans.com/
 
 ### Initialize
 
-Required to set up the class
+Required to set up the class. Versions post 6.1.0 also support getting the status code of the API call. This is useful for debugging. To use it pass `status_code=True` to the `CocApi`.
 
 ```python
 from cocapi import CocApi
 
 token = 'YOUR_API_TOKEN'
-timeout=1 #requests timeout
+timeout=60 #requests timeout
 
 api=CocApi(token,timeout)
 ```
@@ -121,7 +121,7 @@ api.clan_war_log(tag)
 ```
 <details>
  <summary>Click to view output</summary>
- 
+
 ```text
 {items:
 [
@@ -200,7 +200,7 @@ api.clan_war_log(tag)
     "endTime": "string",
     "result": "string"
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -550,7 +550,7 @@ Top 200 clans in a given location
     "previousRank": 0,
     "badgeUrls": {}
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -587,7 +587,7 @@ Top 200 players in a given location
     "previousRank": 0,
     "trophies": 0
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -609,7 +609,7 @@ Top 200 versus clans in a given location
     "clanPoints": 0,
     "clanVersusPoints": 0
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -641,7 +641,7 @@ Top 200 versus players in a given location
     "previousRank": 0,
     "versusTrophies": 0
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -667,7 +667,7 @@ api.league()
     "id": 0,
     "iconUrls": {}
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -705,7 +705,7 @@ Information is available only for Legend League
   {
     "id": "string"
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -743,7 +743,7 @@ Information is available only for Legend League
     "previousRank": 0,
     "trophies": 0
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -769,7 +769,7 @@ api.clan_leaguegroup(tag)
     "id": 0,
     "iconUrls": {}
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```
@@ -791,7 +791,7 @@ api.labels_players()
     "id": 0,
     "iconUrls": {}
   }
-], 
+],
 "paging": {'cursors': {}}
 }
 ```

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cocapi"
-version = "2.0.6"
+version = "2.1.0"
 description = "A python wrapper around clash of clans api"
 authors = ["Tony Benoy <me@tonybenoy.com>"]
 license = "GNU GENERAL PUBLIC LICENSE"
@@ -9,16 +9,16 @@ license = "GNU GENERAL PUBLIC LICENSE"
 python = "^3.7.2"
 httpx = "^0.23.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
 pylint = "^2.14.5"
 mypy = "^0.971"
 isort = "^5.10.1"
-
+pre-commit = "^2.20.0"
+ruff = "^0.0.277"
 # [build-system]
 # requires = ["poetry-core>=1.0.0"]
 # build-backend = "poetry.core.masonry.api"
-pre-commit = "^2.20.0"
 [build-system]
 requires = ["setuptools", "wheel"]
 [tool.black]
@@ -45,7 +45,7 @@ include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 line_length = 88
-skip_glob = ['venv']
+skip_glob = ['venv' , ".venv"]
 ensure_newline_before_comments=true
 skip_gitignore = true
 [flake8]
