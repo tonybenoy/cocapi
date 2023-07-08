@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cocapi"
-version = "2.0.6"
+version = "2.1.0"
 description = "A python wrapper around clash of clans api"
 authors = ["Tony Benoy <me@tonybenoy.com>"]
 license = "GNU GENERAL PUBLIC LICENSE"
