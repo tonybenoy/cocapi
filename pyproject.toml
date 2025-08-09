@@ -1,6 +1,6 @@
 [project]
 name = "cocapi"
-version = "2.2.1"
+version = "2.2.2"
 description = "A python wrapper around clash of clans api"
 authors = [{name = "Tony Benoy", email = "me@tonybenoy.com"}]
 license = {text = "GPL-3.0"}

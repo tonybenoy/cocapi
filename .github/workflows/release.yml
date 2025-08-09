@@ -7,7 +7,10 @@ on:
     paths: [ 'pyproject.toml' ]
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
   check-version:
+    needs: ci
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -55,17 +58,27 @@ jobs:
         git push origin ${{ needs.check-version.outputs.version }}
     
     - name: Create GitHub Release
-      uses: actions/create-release@v1
+      run: |
+        gh release create ${{ needs.check-version.outputs.version }} \
+          --title "${{ needs.check-version.outputs.version }}" \
+          --notes "Release ${{ needs.check-version.outputs.version }}
+
+        Auto-generated release from version bump in pyproject.toml"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python for publishing
+      uses: actions/setup-python@v5
       with:
-        tag_name: ${{ needs.check-version.outputs.version }}
-        release_name: ${{ needs.check-version.outputs.version }}
-        draft: false
-        prerelease: false
-        body: |
-          Release ${{ needs.check-version.outputs.version }}
-          
-          Auto-generated release from version bump in pyproject.toml
-          
-          See [CHANGELOG](https://github.com/${{ github.repository }}/compare/${{ needs.check-version.outputs.version }}...HEAD) for details.
+        python-version: '3.11'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Build package
+      run: uv build
+      
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
