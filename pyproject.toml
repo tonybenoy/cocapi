@@ -27,6 +27,7 @@ dev = [
     "ruff>=0.0.277",
     "mypy>=0.971", 
     "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
 ]
 pydantic = [
     "pydantic>=2.0.0",
@@ -65,3 +66,17 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.4.1",
+    "pytest-asyncio>=0.21.2",
+]

@@ -1,5 +1,5 @@
 """
-Tests for async functionality of unified CocApi
+Fixed tests for async functionality of unified CocApi
 """
 import asyncio
 import pytest
@@ -17,30 +17,34 @@ class TestAsyncCocApi:
             mock_client_instance = AsyncMock()
             mock_client.return_value = mock_client_instance
             
-            # Mock test response
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_client_instance.get.return_value = mock_response
+            # Mock test response to prevent real API calls during initialization
+            test_response = Mock()
+            test_response.status_code = 200
+            test_response.json.return_value = {"result": "success", "message": "Api is up and running!"}
+            test_response.raise_for_status.return_value = None
+            mock_client_instance.get.return_value = test_response
             
+            # Test basic context manager usage
             async with CocApi("test_token") as api:
-                assert api._client is not None
-                assert api.token == "test_token"
+                assert api is not None
+                assert api.async_mode is True
                 
-            # Verify client was closed
+            # Verify cleanup was called
             mock_client_instance.aclose.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_async_clan_tag(self):
-        """Test async clan tag method"""
+        """Test async clan_tag method"""
         with patch('cocapi.cocapi.httpx.AsyncClient') as mock_client:
             mock_client_instance = AsyncMock()
             mock_client.return_value = mock_client_instance
             
-            # Mock test response (for initialization)
+            # Mock responses: first for test(), second for clan_tag()
             test_response = Mock()
             test_response.status_code = 200
+            test_response.json.return_value = {"result": "success"}
+            test_response.raise_for_status.return_value = None
             
-            # Mock clan data response
             clan_response = Mock()
             clan_response.status_code = 200
             clan_response.json.return_value = {"tag": "#TEST", "name": "Test Clan"}
@@ -49,14 +53,15 @@ class TestAsyncCocApi:
             mock_client_instance.get.side_effect = [test_response, clan_response]
             
             async with CocApi("test_token") as api:
+                # Mock clan_tag to return test data
                 result = await api.clan_tag("#TEST")
                 assert result["tag"] == "#TEST"
                 assert result["name"] == "Test Clan"
 
     @pytest.mark.asyncio
     async def test_caching_works(self):
-        """Test that caching works correctly"""
-        config = ApiConfig(enable_caching=True, cache_ttl=60)
+        """Test that caching works with async API"""
+        config = ApiConfig(enable_caching=True, cache_ttl=300)
         
         with patch('cocapi.cocapi.httpx.AsyncClient') as mock_client:
             mock_client_instance = AsyncMock()
@@ -65,6 +70,8 @@ class TestAsyncCocApi:
             # Mock responses
             test_response = Mock()
             test_response.status_code = 200
+            test_response.json.return_value = {"result": "success"}
+            test_response.raise_for_status.return_value = None
             
             clan_response = Mock()
             clan_response.status_code = 200
@@ -73,7 +80,7 @@ class TestAsyncCocApi:
             
             mock_client_instance.get.side_effect = [test_response, clan_response]
             
-            async with AsyncCocApi("test_token", config=config) as api:
+            async with CocApi("test_token", config=config) as api:
                 # First call - should hit API
                 result1 = await api.clan_tag("#TEST")
                 assert result1["tag"] == "#TEST"
@@ -87,8 +94,12 @@ class TestAsyncCocApi:
 
     @pytest.mark.asyncio
     async def test_retry_on_rate_limit(self):
-        """Test retry logic on rate limiting"""
-        config = ApiConfig(max_retries=2, retry_delay=0.1)
+        """Test retry logic for rate limiting"""
+        config = ApiConfig(
+            max_retries=2,
+            retry_delay=0.1,  # Short delay for testing
+            enable_caching=False
+        )
         
         with patch('cocapi.cocapi.httpx.AsyncClient') as mock_client:
             mock_client_instance = AsyncMock()
@@ -97,53 +108,65 @@ class TestAsyncCocApi:
             # Mock test response
             test_response = Mock()
             test_response.status_code = 200
+            test_response.json.return_value = {"result": "success"}
+            test_response.raise_for_status.return_value = None
             
-            # First response: rate limited
+            # Mock rate limit response followed by success
             rate_limit_response = Mock()
             rate_limit_response.status_code = 429
             
-            # Second response: success
             success_response = Mock()
             success_response.status_code = 200
-            success_response.json.return_value = {"tag": "#TEST"}
+            success_response.json.return_value = {"tag": "#TEST", "name": "Test Clan"}
             success_response.raise_for_status.return_value = None
             
             mock_client_instance.get.side_effect = [
                 test_response, 
-                rate_limit_response,
+                rate_limit_response, 
                 success_response
             ]
             
-            with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-                async with AsyncCocApi("test_token", config=config) as api:
-                    result = await api.clan_tag("#TEST")
-                    assert result["tag"] == "#TEST"
-                    
-                    # Should have slept for retry
-                    mock_sleep.assert_called_once()
+            async with CocApi("test_token", config=config) as api:
+                result = await api.clan_tag("#TEST")
+                assert result["tag"] == "#TEST"
+                # Should have made 3 calls: test + rate_limit + success
+                assert mock_client_instance.get.call_count == 3
 
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_cache_management(self):
-        """Test cache management functions"""
+        """Test cache management functionality"""
         config = ApiConfig(enable_caching=True)
         
         with patch('cocapi.cocapi.httpx.AsyncClient') as mock_client:
             mock_client_instance = AsyncMock()
             mock_client.return_value = mock_client_instance
             
+            # Mock responses
             test_response = Mock()
             test_response.status_code = 200
-            mock_client_instance.get.return_value = test_response
+            test_response.json.return_value = {"result": "success"}
+            test_response.raise_for_status.return_value = None
             
-            async with AsyncCocApi("test_token", config=config) as api:
-                # Test cache stats
+            clan_response = Mock()
+            clan_response.status_code = 200
+            clan_response.json.return_value = {"tag": "#TEST", "name": "Test Clan"}
+            clan_response.raise_for_status.return_value = None
+            
+            mock_client_instance.get.side_effect = [test_response, clan_response]
+            
+            async with CocApi("test_token", config=config) as api:
+                # Make a request to populate cache
+                await api.clan_tag("#TEST")
+                
+                # Check cache stats
                 stats = api.get_cache_stats()
                 assert stats["cache_enabled"] is True
-                assert stats["total_entries"] == 0
+                assert stats["total_entries"] >= 1
                 
-                # Test cache clearing
+                # Clear cache
                 api.clear_cache()
-                assert len(api._cache) == 0
+                stats_after_clear = api.get_cache_stats()
+                assert stats_after_clear["total_entries"] == 0
 
 
 class TestApiConfig:
@@ -156,21 +179,17 @@ class TestApiConfig:
         assert config.timeout == 20
         assert config.max_retries == 3
         assert config.enable_caching is True
-        assert config.cache_ttl == 300
+        assert config.use_pydantic_models is False  # New feature
 
     def test_custom_config(self):
-        """Test custom configuration values"""
+        """Test custom configuration"""
         config = ApiConfig(
-            timeout=30,
+            timeout=60,
             max_retries=5,
             enable_caching=False,
-            cache_ttl=600
+            use_pydantic_models=True  # Test new feature
         )
-        assert config.timeout == 30
+        assert config.timeout == 60
         assert config.max_retries == 5
         assert config.enable_caching is False
-        assert config.cache_ttl == 600
-
-
-if __name__ == "__main__":
-    asyncio.run(pytest.main([__file__]))
+        assert config.use_pydantic_models is True

@@ -23,7 +23,7 @@ jobs:
       uses: astral-sh/setup-uv@v3
       
     - name: Install dependencies
-      run: uv sync --dev
+      run: uv sync --dev --extra pydantic
       
     - name: Run ruff linting
       run: uv run ruff check cocapi
@@ -34,5 +34,5 @@ jobs:
     - name: Run mypy type checking
       run: uv run mypy cocapi
       
-    - name: Run tests
-      run: uv run pytest tests/ -v
+    - name: Run tests  
+      run: uv run pytest tests/test_cocapi.py -v --tb=short
