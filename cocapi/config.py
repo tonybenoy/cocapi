@@ -3,6 +3,7 @@ Configuration management for cocapi
 """
 
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -24,6 +25,15 @@ class ApiConfig:
     requests_per_second: float = 10.0
     burst_limit: int = 20
 
+    # Monitoring and metrics
+    enable_metrics: bool = False  # Track request metrics
+    metrics_window_size: int = 1000  # Number of requests to track
+
+    # Connection optimization
+    enable_keepalive: bool = True  # Enable HTTP keep-alive
+    max_connections: int = 10  # Maximum connections in pool
+    max_keepalive_connections: int = 5  # Maximum keep-alive connections
+
 
 @dataclass
 class CacheEntry:
@@ -36,3 +46,16 @@ class CacheEntry:
     def is_expired(self, current_time: float) -> bool:
         """Check if cache entry is expired"""
         return (current_time - self.timestamp) > self.ttl
+
+
+@dataclass
+class RequestMetric:
+    """Metrics for a single API request"""
+
+    endpoint: str
+    method: str
+    status_code: int
+    response_time: float
+    timestamp: float
+    cache_hit: bool
+    error_type: Optional[str] = None

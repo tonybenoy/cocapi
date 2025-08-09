@@ -151,7 +151,7 @@ def http_error_test_cases():
     """Common HTTP error test cases"""
     return [
         (400, "Bad request - check your parameters"),
-        (403, "Forbidden - check your API token"),
+        (403, "Forbidden - invalid API token or access denied"),
         (404, "Not found - check clan/player tag"),
         (429, "Rate limited - too many requests"),
         (500, "Server error - try again later"),

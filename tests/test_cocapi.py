@@ -38,7 +38,7 @@ class TestBasicFunctionality:
 
     def test_mutable_default_arguments_fixed(self, basic_api):
         """Test that mutable default arguments are properly handled"""
-        with patch.object(basic_api, '_CocApi__api_response') as mock_response:
+        with patch.object(basic_api, '_api_response') as mock_response:
             mock_response.return_value = {"items": []}
             
             # Call methods with and without params
@@ -50,14 +50,14 @@ class TestBasicFunctionality:
 
     def test_backward_compatibility_methods(self, basic_api):
         """Test that methods work without parameters (backward compatibility)"""
-        with patch.object(basic_api, '_CocApi__api_response') as mock_response:
+        with patch.object(basic_api, '_api_response') as mock_response:
             mock_response.return_value = {"items": []}
             
             # Test methods that should work without parameters
             methods_to_test = [
                 basic_api.clan,
                 basic_api.league, 
-                basic_api.locations,
+                basic_api.location,
                 basic_api.labels_clans,
                 basic_api.labels_players
             ]
@@ -69,14 +69,14 @@ class TestBasicFunctionality:
 
     def test_methods_with_dict_params(self, basic_api):
         """Test that methods work with dictionary parameters"""
-        with patch.object(basic_api, '_CocApi__api_response') as mock_response:
+        with patch.object(basic_api, '_api_response') as mock_response:
             mock_response.return_value = {"items": []}
             
             params = {"limit": 10, "after": "cursor"}
             methods_to_test = [
                 (basic_api.clan, params),
                 (basic_api.league, params),
-                (basic_api.locations, params)
+                (basic_api.location, params)
             ]
             
             for method, param in methods_to_test:
@@ -90,7 +90,7 @@ class TestErrorHandling:
 
     def test_timeout_error_handling(self, basic_api):
         """Test timeout error handling"""
-        with patch('httpx.get') as mock_get:
+        with patch('cocapi.client.httpx.get') as mock_get:
             import httpx
             mock_get.side_effect = httpx.TimeoutException("Timeout")
             
@@ -98,19 +98,23 @@ class TestErrorHandling:
             
             self._assert_error_response(result, "timeout", "timeout")
 
-    def test_http_error_status_codes(self, basic_api, http_error_test_cases):
+    def test_http_error_status_codes(self, http_error_test_cases):
         """Test specific HTTP error status code handling"""
-        for status_code, expected_message in http_error_test_cases:
-            with patch('httpx.get') as mock_get:
-                mock_response = Mock()
-                mock_response.status_code = status_code
-                mock_get.return_value = mock_response
-                
-                result = basic_api.clan_tag("CLAN_TAG")
-                
-                assert result["result"] == "error"
-                assert result["message"] == expected_message
-                assert result["status_code"] == status_code
+        # Create API instance with status_code=True
+        with patch.object(CocApi, 'test', return_value={"result": "success"}):
+            api = CocApi("token", status_code=True)
+            
+            for status_code, expected_message in http_error_test_cases:
+                with patch('cocapi.client.httpx.get') as mock_get:
+                    mock_response = Mock()
+                    mock_response.status_code = status_code
+                    mock_get.return_value = mock_response
+                    
+                    result = api.clan_tag("CLAN_TAG")
+                    
+                    assert result["result"] == "error"
+                    assert result["message"] == expected_message
+                    assert result["status_code"] == status_code
 
     def _assert_error_response(self, result, message_contains, error_type):
         """Helper to assert error response format"""
@@ -127,7 +131,7 @@ class TestResponseHandling:
         with patch.object(CocApi, 'test', return_value={"result": "success"}):
             api = CocApi("token", status_code=True)
             
-            with patch('httpx.get') as mock_get:
+            with patch('cocapi.client.httpx.get') as mock_get:
                 mock_response = test_helpers.create_clan_response()
                 mock_get.return_value = mock_response
                 
@@ -138,14 +142,14 @@ class TestResponseHandling:
 
     def test_url_construction_safety(self, basic_api, test_helpers):
         """Test that URL construction handles empty params safely"""
-        with patch('httpx.get') as mock_get:
+        with patch('cocapi.client.httpx.get') as mock_get:
             mock_response = test_helpers.create_clan_response()
             mock_get.return_value = mock_response
             
             basic_api.clan_tag("CLAN_TAG")
             
             # Verify URL doesn't have empty query string
-            called_url = mock_get.call_args[1]["url"]
+            called_url = mock_get.call_args[0][0]  # First positional argument
             assert not called_url.endswith("?")
 
 
@@ -154,7 +158,7 @@ class TestBackwardCompatibility:
 
     def test_old_usage_patterns(self, basic_api):
         """Test that old code patterns still work exactly as before"""
-        with patch.object(basic_api, '_CocApi__api_response') as mock_response:
+        with patch.object(basic_api, '_api_response') as mock_response:
             mock_response.return_value = {"items": []}
             
             # Test various old patterns
@@ -187,14 +191,14 @@ class TestEnhancedFeatures:
         """Test cache management methods"""
         # Test cache stats
         stats = basic_api.get_cache_stats()
-        required_keys = ["total_entries", "cache_enabled", "active_entries"]
+        required_keys = ["total_entries", "enabled", "valid_entries"]
         
         for key in required_keys:
             assert key in stats
         
         # Test cache clearing
         basic_api.clear_cache()
-        assert len(basic_api._cache) == 0
+        assert len(basic_api.cache.cache) == 0
 
     def test_retry_configuration(self):
         """Test retry behavior can be configured"""
@@ -207,7 +211,7 @@ class TestEnhancedFeatures:
 
     def test_caching_behavior(self, basic_api, test_helpers):
         """Test that caching works correctly"""
-        with patch('httpx.get') as mock_get:
+        with patch('cocapi.client.httpx.get') as mock_get:
             mock_response = test_helpers.create_clan_response()
             mock_get.return_value = mock_response
             

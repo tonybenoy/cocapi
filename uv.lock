@@ -121,7 +121,7 @@ wheels = [
 
 [[package]]
 name = "cocapi"
-version = "2.2.0"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx", version = "0.24.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
