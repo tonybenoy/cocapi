@@ -1,0 +1,71 @@
+# Automated release workflow
+name: Create Release
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'pyproject.toml' ]
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_changed: ${{ steps.version.outputs.changed }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Extract version from pyproject.toml
+      id: version
+      run: |
+        # Get current version from pyproject.toml using grep and sed
+        CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+        echo "version=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        
+        # Check if this version already has a tag
+        if git tag -l | grep -q "^v$CURRENT_VERSION$"; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+          echo "Version v$CURRENT_VERSION already exists as a tag"
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT  
+          echo "New version detected: v$CURRENT_VERSION"
+        fi
+
+  create-release:
+    needs: check-version
+    if: needs.check-version.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create git tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git tag ${{ needs.check-version.outputs.version }}
+        git push origin ${{ needs.check-version.outputs.version }}
+    
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.check-version.outputs.version }}
+        release_name: ${{ needs.check-version.outputs.version }}
+        draft: false
+        prerelease: false
+        body: |
+          Release ${{ needs.check-version.outputs.version }}
+          
+          Auto-generated release from version bump in pyproject.toml
+          
+          See [CHANGELOG](https://github.com/${{ github.repository }}/compare/${{ needs.check-version.outputs.version }}...HEAD) for details.
