@@ -203,7 +203,7 @@ class TestEnhancedFeatures:
         with patch.object(CocApi, 'test', return_value={"result": "success"}):
             api = CocApi("token", config=config)
             assert api.config.max_retries == 5
-            assert api.config.retry_delay == 0.5
+            assert abs(api.config.retry_delay - 0.5) < 1e-9
 
     def test_caching_behavior(self, basic_api, test_helpers):
         """Test that caching works correctly"""

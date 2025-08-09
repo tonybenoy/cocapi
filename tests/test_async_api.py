@@ -245,7 +245,7 @@ class TestAsyncConfiguration(AsyncTestBase):
         
         async for api, mock_client in self.create_async_context(config=config, mock_responses=responses):
             assert api.config.enable_rate_limiting is True
-            assert api.config.requests_per_second == 10.0
+            assert abs(api.config.requests_per_second - 10.0) < 1e-9
             assert api.config.burst_limit == 20
 
 
