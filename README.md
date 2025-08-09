@@ -21,7 +21,7 @@ A high-performance Python wrapper for SuperCell's Clash of Clans API with enterp
 **🔄 100% Backward Compatible**: Drop-in replacement for existing code  
 **🛡️ Production Ready**: Retry logic, rate limiting, and comprehensive error handling
 
-Get Token from https://developer.clashofclans.com/
+Get Token from [https://developer.clashofclans.com/](https://developer.clashofclans.com/)
 
 ## Features
 
