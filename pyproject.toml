@@ -1,52 +1,67 @@
-[tool.poetry]
+[project]
 name = "cocapi"
-version = "2.1.0"
+version = "2.2.0"
 description = "A python wrapper around clash of clans api"
-authors = ["Tony Benoy <me@tonybenoy.com>"]
-license = "GNU GENERAL PUBLIC LICENSE"
+authors = [{name = "Tony Benoy", email = "me@tonybenoy.com"}]
+license = {text = "GPL-3.0"}
+requires-python = ">=3.7.2"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["clash", "clans", "api", "wrapper", "supercell"]
+dependencies = [
+    "httpx>=0.23.0,<1.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.7.2"
-httpx = "^0.23.0"
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.0.277",
+    "mypy>=0.971", 
+    "pytest>=7.4.0",
+]
+pydantic = [
+    "pydantic>=2.0.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-black = "^22.6.0"
-pylint = "^2.14.5"
-mypy = "^0.971"
-isort = "^5.10.1"
-pre-commit = "^2.20.0"
-ruff = "^0.0.277"
-# [build-system]
-# requires = ["poetry-core>=1.0.0"]
-# build-backend = "poetry.core.masonry.api"
+[project.urls]
+Homepage = "https://github.com/tonybenoy/cocapi"
+Repository = "https://github.com/tonybenoy/cocapi"
+Issues = "https://github.com/tonybenoy/cocapi/issues"
 [build-system]
-requires = ["setuptools", "wheel"]
-[tool.black]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+[tool.ruff]
 line-length = 88
-target-version = ['py36', 'py37', 'py38']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
-[tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-line_length = 88
-skip_glob = ['venv' , ".venv"]
-ensure_newline_before_comments=true
-skip_gitignore = true
-[flake8]
-max-line-length = 88
+target-version = "py37"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long, handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["cocapi"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

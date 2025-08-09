@@ -1,45 +1,236 @@
 <p>
     <a href="https://github.com/tonybenoy/cocapi/actions">
-        <img src="https://github.com/tonybenoy/cocapi/workflows/mypy/badge.svg" alt="Test Status" height="20">
+        <img src="https://github.com/tonybenoy/cocapi/workflows/CI/badge.svg" alt="CI Status" height="20">
     </a>
     <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/v/cocapi" alt="Pypi version" height="21"></a>
 </p>
 <p>
-    <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.6+-blue.svg" alt="Python version" height="17"></a>
+    <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.7+-blue.svg" alt="Python version" height="17"></a>
     <a href="https://github.com/tonybenoy/cocapi/blob/master/LICENSE"><img src="https://img.shields.io/github/license/tonybenoy/cocapi" alt="License" height="17"></a>
-    <a href="https://github.com/psf/black">
-        <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Codestyle Black" height="17">
+    <a href="https://github.com/astral-sh/ruff">
+        <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff" height="17">
     </a>
 </p>
 
 # ClashOfClansAPI
 
-Python Wrapper for SuperCells Clash Of Clans API
+A high-performance Python wrapper for SuperCell's Clash of Clans API with enterprise-grade features including async support, response caching, retry logic, and configurable settings.
+
+**🎯 Complete API Coverage**: All 22 official endpoints implemented  
+**⚡ High Performance**: Async support with intelligent caching  
+**🔄 100% Backward Compatible**: Drop-in replacement for existing code  
+**🛡️ Production Ready**: Retry logic, rate limiting, and comprehensive error handling
 
 Get Token from https://developer.clashofclans.com/
 
+## Features
+
+- **Synchronous and Asynchronous API support**
+- **Intelligent response caching with TTL**
+- **Automatic retry logic with exponential backoff**
+- **Rate limiting protection**
+- **Comprehensive error handling**
+- **Type hints for better development experience**
+- **Optional Pydantic models for structured data validation**
+- **100% backward compatible**
+- **Configurable settings**
+
 # Install
 
-> pip install cocapi
+```bash
+# Standard installation (dict responses)
+pip install cocapi
+
+# With optional Pydantic models support
+pip install 'cocapi[pydantic]'
+```
 
 
-# Features and usage examples
+# Usage Examples
 
-### Initialize
-
-Required to set up the class. Versions post 6.1.0 also support getting the status code of the API call. This is useful for debugging. To use it pass `status_code=True` to the `CocApi`.
+## Basic Synchronous Usage (Backward Compatible)
 
 ```python
 from cocapi import CocApi
 
 token = 'YOUR_API_TOKEN'
-timeout=60 #requests timeout
+timeout = 60  # requests timeout
 
-api=CocApi(token,timeout)
+# Basic initialization (same as before)
+api = CocApi(token, timeout)
+
+# With status codes (same as before)
+api = CocApi(token, timeout, status_code=True)
 ```
 
+## Advanced Configuration
 
+```python
+from cocapi import CocApi, ApiConfig
 
+# Custom configuration
+config = ApiConfig(
+    timeout=30,
+    max_retries=5,
+    cache_ttl=600,  # Cache for 10 minutes
+    enable_caching=True,
+    retry_delay=2  # Initial retry delay in seconds
+)
+
+api = CocApi('YOUR_API_TOKEN', config=config)
+
+# Cache management
+stats = api.get_cache_stats()
+api.clear_cache()  # Clear all cached responses
+```
+
+## Asynchronous Usage
+
+```python
+import asyncio
+from cocapi import CocApi, ApiConfig
+
+async def main():
+    # Method 1: Automatic async mode with context manager (recommended)
+    async with CocApi('YOUR_API_TOKEN') as api:
+        clan = await api.clan_tag('#CLAN_TAG')
+        player = await api.players('#PLAYER_TAG')
+    
+    # Method 2: Explicit async mode
+    api = CocApi('YOUR_API_TOKEN', async_mode=True)
+    async with api:
+        clan = await api.clan_tag('#CLAN_TAG')
+    
+    # Method 3: With custom configuration
+    config = ApiConfig(timeout=30, enable_caching=True)
+    async with CocApi('YOUR_API_TOKEN', config=config) as api:
+        clan = await api.clan_tag('#CLAN_TAG')
+
+# Run async code
+asyncio.run(main())
+```
+
+## Pydantic Models (Optional)
+
+For enhanced type safety and structured data validation, cocapi supports optional Pydantic models:
+
+```python
+from cocapi import CocApi, ApiConfig, Clan, Player
+
+# Enable Pydantic models
+config = ApiConfig(use_pydantic_models=True)
+api = CocApi('YOUR_API_TOKEN', config=config)
+
+# Get structured clan data
+clan = api.clan_tag('#2PP')  # Returns Clan model instead of dict
+print(clan.name)             # Type-safe attribute access
+print(clan.clan_level)       # IDE autocompletion support
+print(clan.members)          # Validated data structure
+
+# Get structured player data  
+player = api.players('#PLAYER_TAG')  # Returns Player model
+print(player.town_hall_level)        # Type-safe attributes
+print(player.trophies)
+print(player.clan.name if player.clan else "No clan")
+
+# Works with async too
+async def get_data():
+    config = ApiConfig(use_pydantic_models=True)
+    async with CocApi('YOUR_TOKEN', config=config) as api:
+        clan = await api.clan_tag('#TAG')  # Returns Clan model
+        return clan.name
+
+# Available models: Clan, Player, ClanMember, League, Achievement, etc.
+# Import them: from cocapi import Clan, Player, ClanMember
+```
+
+### Benefits of Pydantic Models
+
+- **Type Safety**: Catch errors at development time
+- **IDE Support**: Full autocompletion and type hints
+- **Data Validation**: Automatic validation of API responses  
+- **Clean Interface**: Object-oriented access to data
+- **Documentation**: Self-documenting code with model schemas
+- **Optional**: Zero impact if not used (lazy imports)
+
+## Performance Comparison
+
+The new features provide significant performance improvements:
+
+- **Caching**: Up to 100% faster for repeated requests
+- **Async**: Handle multiple requests concurrently
+- **Retry Logic**: Automatic handling of temporary failures
+- **Rate Limiting**: Built-in protection against API limits
+
+## Migration Guide
+
+### For Existing Users
+
+**No breaking changes!** Your existing code will continue to work exactly as before:
+
+```python
+# This still works exactly the same
+from cocapi import CocApi
+api = CocApi('YOUR_TOKEN', 60, status_code=True)
+clan = api.clan_tag('#CLAN_TAG')
+```
+
+### Upgrading to New Features
+
+To take advantage of new features:
+
+```python
+from cocapi import CocApi, ApiConfig
+
+# 1. Add caching to existing code (no changes needed!)
+config = ApiConfig(enable_caching=True, cache_ttl=300)
+api = CocApi('YOUR_TOKEN', config=config)
+
+# 2. Use async for better performance (same class!)
+async with CocApi('YOUR_TOKEN') as api:
+    clan = await api.clan_tag('#CLAN_TAG')
+
+# 3. Enhanced error handling is automatic
+result = api.clan_tag('#INVALID_TAG')
+if result.get('result') == 'error':
+    print(f"Error: {result.get('message')}")
+```
+
+---
+
+## What's New in v2.2.0+
+
+🆕 **Latest in v2.2.0:**
+- **Optional Pydantic Models**: Type-safe, validated data structures with IDE support
+- **Enhanced Type Safety**: Full Pydantic model support for `Clan`, `Player`, and all API responses
+- **Flexible Configuration**: Enable/disable Pydantic models via `ApiConfig.use_pydantic_models`
+- **Lazy Loading**: Zero impact when not using models (automatic imports)
+- **Async + Pydantic**: Full async support with Pydantic model validation
+- **Comprehensive Models**: 15+ Pydantic models covering all API response types
+
+## What's New in v2.1.0+
+
+✨ **Major New Features:**
+- **Unified Async Support**: Same `CocApi` class works for both sync and async!
+- **Intelligent Caching**: Automatic response caching with configurable TTL
+- **Retry Logic**: Exponential backoff for handling temporary API failures
+- **Enhanced Configuration**: Flexible settings via ApiConfig class
+- **Better Error Handling**: Comprehensive error messages and types
+- **Type Hints**: Complete type annotations for better IDE support
+- **Rate Limiting Protection**: Built-in handling of API rate limits
+- **🆕 Optional Pydantic Models**: Type-safe, validated data structures with IDE support
+
+🔧 **Code Quality Improvements:**
+- Fixed all mutable default arguments
+- Added comprehensive logging
+- Improved test coverage
+- Enhanced documentation
+
+📚 **Full API Reference**
+
+The following sections document all available API methods. All methods work identically in both sync and async modes - just use `await` when in async context!
+
+---
 
 ## Clans
 
@@ -328,6 +519,44 @@ api.clan_leaguegroup(tag)
       ]
     }
   ]
+}
+```
+</details>
+
+### Clan Capital Raid Seasons
+```python
+api.clan_capitalraidseasons(tag)
+```
+Retrieve clan's capital raid seasons information
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{"items":
+[
+  {
+    "state": "string",
+    "startTime": "string", 
+    "endTime": "string",
+    "capitalTotalLoot": 0,
+    "raidsCompleted": 0,
+    "totalAttacks": 0,
+    "enemyDistrictsDestroyed": 0,
+    "offensiveReward": 0,
+    "defensiveReward": 0,
+    "members": [
+      {
+        "tag": "string",
+        "name": "string",
+        "attacks": 0,
+        "attackLimit": 0,
+        "bonusAttackLimit": 0,
+        "capitalResourcesLooted": 0
+      }
+    ]
+  }
+],
+"paging": {'cursors': {}}
 }
 ```
 </details>
@@ -749,14 +978,144 @@ Information is available only for Legend League
 ```
 </details>
 
+### List Capital Leagues
+```python
+api.capitalleagues()
+```
+<details>
+ <summary>Click to view output</summary>
 
+```text
+{"items":
+[
+  {
+    "name": {},
+    "id": 0,
+    "iconUrls": {}
+  }
+],
+"paging": {'cursors': {}}
+}
+```
+</details>
+
+### Capital League Information
+```python
+api.capitalleagues_id(league_id)
+```
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{
+  "name": {},
+  "id": 0,
+  "iconUrls": {}
+}
+```
+</details>
+
+### List Builder Base Leagues
+```python
+api.builderbaseleagues()
+```
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{"items":
+[
+  {
+    "name": {},
+    "id": 0,
+    "iconUrls": {}
+  }
+],
+"paging": {'cursors': {}}
+}
+```
+</details>
+
+### Builder Base League Information
+```python
+api.builderbaseleagues_id(league_id)
+```
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{
+  "name": {},
+  "id": 0,
+  "iconUrls": {}
+}
+```
+</details>
+
+### List War Leagues
+```python
+api.warleagues()
+```
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{"items":
+[
+  {
+    "name": {},
+    "id": 0,
+    "iconUrls": {}
+  }
+],
+"paging": {'cursors': {}}
+}
+```
+</details>
+
+### War League Information
+```python
+api.warleagues_id(league_id)
+```
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{
+  "name": {},
+  "id": 0,
+  "iconUrls": {}
+}
+```
+</details>
+
+
+
+
+## Gold Pass
+
+### Current Gold Pass Season
+```python
+api.goldpass_seasons_current()
+```
+Get information about the current gold pass season
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{
+  "startTime": "string",
+  "endTime": "string" 
+}
+```
+</details>
 
 
 ## Labels
 
 ### List Clan Labels
 ```python
-api.clan_leaguegroup(tag)
+api.labels_clans()
 ```
 <details>
  <summary>Click to view output</summary>
