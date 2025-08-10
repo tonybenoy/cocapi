@@ -1,10 +1,10 @@
 [project]
 name = "cocapi"
-version = "3.0.0"
+version = "3.0.1"
 description = "A python wrapper around clash of clans api"
 readme = "README.md"
-authors = [{name = "Tony Benoy", email = "me@tonybenoy.com"}]
-license = {text = "GPL-3.0"}
+authors = [{ name = "Tony Benoy", email = "me@tonybenoy.com" }]
+license = { text = "GPL-3.0" }
 requires-python = ">=3.7.2"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,14 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 keywords = ["clash", "clans", "api", "wrapper", "supercell"]
-dependencies = [
-    "httpx>=0.23.0,<1.0.0",
-]
+dependencies = ["httpx>=0.23.0,<1.0.0"]
 
 [project.optional-dependencies]
-pydantic = [
-    "pydantic>=2.0.0",
-]
+pydantic = ["pydantic>=2.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/tonybenoy/cocapi"
@@ -73,7 +69,7 @@ addopts = "-v --tb=short"
 [dependency-groups]
 dev = [
     "ruff>=0.0.277",
-    "mypy>=1.4.1", 
+    "mypy>=1.4.1",
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.2",
 ]

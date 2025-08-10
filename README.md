@@ -26,8 +26,8 @@ Get Token from [https://developer.clashofclans.com/](https://developer.clashofcl
 
 ## ✨ Key Features
 
-- **🔄 Synchronous & Asynchronous Support**: Same API works for both sync and async
-- **🚀 Custom Endpoint Support**: Future-proof with any new SuperCell endpoints
+- **🔄 Sync & Async Support**: Same API works for both sync and async
+- **🚀 Custom Endpoints**: Future-proof with any new SuperCell endpoints  
 - **💾 Intelligent Caching**: Response caching with configurable TTL and statistics
 - **🔁 Smart Retry Logic**: Exponential backoff with configurable retry policies
 - **⚡ Rate Limiting**: Built-in protection against API rate limits (async mode)
@@ -35,10 +35,8 @@ Get Token from [https://developer.clashofclans.com/](https://developer.clashofcl
 - **📊 Metrics & Analytics**: Request performance tracking and insights
 - **🔌 Middleware System**: Pluggable request/response processing pipeline
 - **🎯 Type Safety**: Complete type hints and optional Pydantic models
-- **🔮 Dynamic Models**: Auto-generated Pydantic models for unknown endpoints
 - **🌐 Base URL Configuration**: Support for proxies and testing environments
 - **🔄 100% Backward Compatible**: Drop-in replacement for existing code
-- **⚙️ Configurable**: Extensive configuration options via ApiConfig
 
 # Install
 
@@ -130,11 +128,9 @@ async def main():
 asyncio.run(main())
 ```
 
-## 🚀 New in v3.0.0: Enterprise Features
+## 🚀 Enterprise Features
 
 ### 📊 Metrics & Analytics
-
-Track API performance and usage patterns:
 
 ```python
 from cocapi import CocApi, ApiConfig
@@ -143,104 +139,52 @@ from cocapi import CocApi, ApiConfig
 config = ApiConfig(enable_metrics=True, metrics_window_size=1000)
 api = CocApi('YOUR_TOKEN', config=config)
 
-# Make some API calls
-clan = api.clan_tag('#CLAN_TAG')
-player = api.players('#PLAYER_TAG')
-
-# Get comprehensive metrics
+# Get comprehensive metrics after API calls
 metrics = api.get_metrics()
 print(f"Total requests: {metrics['total_requests']}")
 print(f"Average response time: {metrics['avg_response_time']:.2f}ms")
 print(f"Cache hit rate: {metrics['cache_hit_rate']:.1%}")
 print(f"Error rate: {metrics['error_rate']:.1%}")
-
-# Performance insights
-insights = metrics['performance_insights']
-for insight in insights:
-    print(f"💡 {insight}")
-
-# Endpoint-specific metrics
-endpoint_stats = metrics['endpoint_metrics']
-for endpoint, stats in endpoint_stats.items():
-    print(f"{endpoint}: {stats['count']} calls, {stats['avg_time']:.2f}ms avg")
 ```
 
 ### 🔌 Middleware System
 
-Add custom request/response processing:
-
 ```python
-from cocapi import CocApi, ApiConfig
-from cocapi.middleware import (
-    add_user_agent_middleware,
-    add_request_id_middleware, 
-    add_response_timestamp_middleware
-)
+from cocapi import CocApi
+from cocapi.middleware import add_user_agent_middleware, add_request_id_middleware
 
 api = CocApi('YOUR_TOKEN')
 
-# Add request middleware
+# Add built-in middleware
 api.add_request_middleware(add_user_agent_middleware("MyApp/1.0"))
 api.add_request_middleware(add_request_id_middleware())
 
-# Add response middleware
-api.add_response_middleware(add_response_timestamp_middleware())
-
-# Custom middleware example
-def add_custom_header(url, headers, params):
-    """Add custom authentication or tracking headers"""
+# Custom middleware
+def add_custom_headers(url, headers, params):
     headers['X-Client-Version'] = '3.0.0'
-    headers['X-Request-Source'] = 'production'
     return url, headers, params
 
-def log_response_size(response):
-    """Log response sizes for monitoring"""
-    if isinstance(response, dict):
-        size = len(str(response))
-        print(f"Response size: {size} characters")
-    return response
-
-api.add_request_middleware(add_custom_header)
-api.add_response_middleware(log_response_size)
-
-# All requests now include middleware processing
-clan = api.clan_tag('#CLAN_TAG')  # Includes custom headers and logging
+api.add_request_middleware(add_custom_headers)
 ```
 
-### 🎯 Enhanced Caching with Statistics
-
-Advanced caching capabilities with detailed statistics:
+### 🎯 Enhanced Caching
 
 ```python
 from cocapi import CocApi, ApiConfig
 
-config = ApiConfig(
-    enable_caching=True,
-    cache_ttl=900  # 15 minutes
-)
+config = ApiConfig(enable_caching=True, cache_ttl=900)  # 15 minutes
 api = CocApi('YOUR_TOKEN', config=config)
 
-# Make requests (cached automatically)
+# Requests are cached automatically
 clan1 = api.clan_tag('#CLAN_TAG')  # Cache miss
 clan2 = api.clan_tag('#CLAN_TAG')  # Cache hit
 
-# Detailed cache statistics
+# Cache statistics and management
 stats = api.get_cache_stats()
-print(f"Cache enabled: {stats['enabled']}")
-print(f"Total entries: {stats['total_entries']}")
-print(f"Valid entries: {stats['valid_entries']}")
-print(f"Expired entries: {stats['expired_entries']}")
-print(f"Memory usage: {stats['memory_usage_mb']:.2f} MB")
-print(f"Hit rate: {stats['hit_rate']:.1%}")
-
-# Cache management
-api.clear_cache()  # Returns number of cleared entries
-print(f"Cleared {api.clear_cache()} entries")
+api.clear_cache()
 ```
 
 ### ⚡ Async Rate Limiting
-
-Built-in rate limiting for async operations:
 
 ```python
 from cocapi import CocApi, ApiConfig
@@ -249,23 +193,15 @@ import asyncio
 async def high_throughput_example():
     config = ApiConfig(
         enable_rate_limiting=True,
-        requests_per_second=10.0,  # Maximum 10 requests per second
-        burst_limit=20,            # Allow bursts up to 20 requests
-        enable_caching=True,
-        enable_metrics=True
+        requests_per_second=10.0,
+        burst_limit=20
     )
     
     async with CocApi('YOUR_TOKEN', config=config) as api:
-        # Make many concurrent requests - rate limiting automatically applied
-        clan_tags = ['#CLAN1', '#CLAN2', '#CLAN3', '#CLAN4', '#CLAN5']
-        
+        # Concurrent requests with automatic rate limiting
+        clan_tags = ['#CLAN1', '#CLAN2', '#CLAN3']
         tasks = [api.clan_tag(tag) for tag in clan_tags]
         results = await asyncio.gather(*tasks)
-        
-        # Check metrics to see rate limiting in action
-        metrics = api.get_metrics()
-        print(f"Requests completed: {metrics['total_requests']}")
-        print(f"Average response time: {metrics['avg_response_time']:.2f}ms")
 
 asyncio.run(high_throughput_example())
 ```
@@ -313,217 +249,71 @@ async def get_data():
 - **Documentation**: Self-documenting code with model schemas
 - **Optional**: Zero impact if not used (lazy imports)
 
-## Custom Endpoints (Future-Proofing) 🚀
+## Custom Endpoints 🚀
 
-When SuperCell adds new endpoints to the Clash of Clans API, you can use them immediately without waiting for library updates:
-
-### Basic Custom Endpoint Usage
+Use any new SuperCell endpoints immediately without waiting for library updates:
 
 ```python
 from cocapi import CocApi
 
 api = CocApi('YOUR_API_TOKEN')
 
-# Call any new endpoint by providing the path
+# Call new endpoints directly
 result = api.custom_endpoint('/new-endpoint')
+result = api.custom_endpoint('/clans/search', {'name': 'my clan', 'limit': 10})
 
-# With parameters
-result = api.custom_endpoint('/clans/search', {
-    'name': 'my clan', 
-    'limit': 10
-})
+# With dynamic Pydantic models
+result = api.custom_endpoint('/new-endpoint', use_dynamic_model=True)
+print(result.some_field)  # Type-safe access
 
 # Async support
 async with CocApi('YOUR_TOKEN') as api:
     result = await api.custom_endpoint('/new-endpoint')
 ```
 
-### Dynamic Pydantic Models for Unknown Endpoints
-
-Create type-safe models automatically from JSON responses:
-
-```python
-from cocapi import CocApi, ApiConfig
-
-# Enable dynamic model creation
-api = CocApi('YOUR_TOKEN')
-
-# Get a dynamic Pydantic model from the response
-result = api.custom_endpoint('/new-endpoint', use_dynamic_model=True)
-
-# Now you get a Pydantic model with:
-# - Type safety
-# - IDE autocompletion
-# - Attribute access: result.field_name
-# - Data validation
-print(result.some_field)  # Type-safe access
-print(type(result))       # <class 'DynamicNewEndpointModel'>
-```
-
-### Advanced Custom Endpoint Examples
-
-```python
-from cocapi import CocApi, ApiConfig
-import asyncio
-
-async def use_new_features():
-    # With full configuration
-    config = ApiConfig(
-        enable_caching=True,
-        cache_ttl=300,
-        max_retries=3
-    )
-    
-    async with CocApi('YOUR_TOKEN', config=config) as api:
-        # Future SuperCell endpoints work immediately
-        new_feature = await api.custom_endpoint(
-            '/hypothetical-new-feature/v2',
-            {'player_tag': '#PLAYER_TAG'},
-            use_dynamic_model=True
-        )
-        
-        # All existing features work: caching, retries, error handling
-        if hasattr(new_feature, 'result') and new_feature.result == 'error':
-            print(f"Error: {new_feature.message}")
-        else:
-            # Type-safe access to new fields
-            print(f"New data: {new_feature.some_new_field}")
-
-# Real-world example: Using custom endpoint for clan search
-api = CocApi('YOUR_TOKEN')
-
-# These are equivalent:
-search1 = api.clan('search', {'name': 'reddit'})  # Built-in method
-search2 = api.custom_endpoint('/clans', {'name': 'reddit'})  # Custom endpoint
-
-# But custom endpoint lets you use ANY future endpoint:
-future_endpoint = api.custom_endpoint('/future-feature', use_dynamic_model=True)
-```
-
-### Benefits of Custom Endpoints
-
-- **🔮 Future-Proof**: Use new SuperCell endpoints immediately
-- **⚡ Full Feature Support**: Caching, retries, async, error handling all work
-- **🛡️ Type Safety**: Dynamic Pydantic models for unknown structures  
-- **🔄 Backward Compatible**: Existing code unchanged
-- **📦 Zero Dependencies**: Dynamic models only if Pydantic is installed
-- **🎯 Flexible**: Works with any HTTP endpoint structure
-
 ## Base URL Configuration 🌐
 
-For testing, proxying, or adapting to API changes, you can modify the base URL:
-
-### Changing Base URL (with Safety Warnings)
+Modify base URL for testing, proxying, or adapting to API changes:
 
 ```python
-from cocapi import CocApi
-import warnings
+from cocapi import CocApi, ApiConfig
 
 api = CocApi('YOUR_TOKEN')
 
-# For development/testing environments
-api.set_base_url(
-    "https://api-dev.clashofclans.com/v1", 
-    force=True  # Required for safety
-)
-# Warning: ⚠️  WARNING: Changing base URL from official endpoint!
+# Change base URL (requires force=True for safety)
+api.set_base_url("https://api-staging.example.com/v1", force=True)
 
-# For proxy usage
-api.set_base_url(
-    "https://my-proxy.example.com/clash-api/v1", 
-    force=True
-)
-
-# Check current URL
-current_url = api.get_base_url()
-print(f"Using: {current_url}")
+# Or set during initialization
+config = ApiConfig(base_url="https://my-proxy.com/clash/v1")
+api = CocApi('YOUR_TOKEN', config=config)
 
 # Reset to official endpoint
 api.reset_base_url()
-# Warning: Base URL reset from '...' to official SuperCell endpoint
 ```
 
-### Base URL via Configuration
+## 📈 Performance Benefits
 
-```python
-from cocapi import CocApi, ApiConfig
-
-# Set base URL during initialization
-config = ApiConfig(
-    base_url="https://api-staging.clashofclans.com/v1",
-    timeout=30,
-    enable_caching=True
-)
-
-api = CocApi('YOUR_TOKEN', config=config)
-# No warnings during initialization - warnings only for runtime changes
-```
-
-### Safety Features
-
-- **Force Required**: Must set `force=True` for safety
-- **URL Validation**: Validates URL format before applying
-- **Clear Warnings**: Prominent warnings about potential risks  
-- **Logging**: All URL changes are logged for audit trail
-- **Easy Reset**: One-method reset to official endpoint
-
-### Common Use Cases
-
-```python
-# Testing against staging environment
-api.set_base_url("https://staging-api.example.com/v1", force=True)
-
-# Using corporate proxy
-api.set_base_url("https://proxy.corp.com/clash/v1", force=True)
-
-# Load balancer or CDN
-api.set_base_url("https://clash-api.cdn.example.com/v1", force=True)
-
-# Local mock server for development
-api.set_base_url("http://localhost:3000/api/v1", force=True)
-
-# Always reset when done testing
-api.reset_base_url()
-```
-
-## 📈 Performance & Reliability Benefits
-
-v3.0.0 introduces significant performance and reliability improvements:
-
-### Performance Gains
-- **⚡ Intelligent Caching**: Up to 100% faster for repeated requests with TTL management
-- **🚀 Async Operations**: Handle dozens of concurrent requests efficiently  
-- **📊 Metrics-Driven**: Identify bottlenecks with comprehensive performance analytics
-- **🔌 Middleware Pipeline**: Minimal overhead for request/response processing
-
-### Reliability Features  
+### Key Improvements
+- **⚡ Intelligent Caching**: Up to 100% faster for repeated requests
+- **🚀 Async Operations**: Handle dozens of concurrent requests efficiently
 - **🔁 Smart Retry Logic**: Exponential backoff with configurable policies
-- **⚡ Rate Limiting**: Built-in protection against API limits (async mode)
-- **🛡️ Enhanced Error Handling**: Detailed error messages with specific error types
 - **📈 Monitoring**: Track error rates, response times, and cache performance
 
-### Real-World Impact
+### Example Setup
 ```python
-# Before v3.0.0: Basic requests
-api = CocApi('token')
-clan = api.clan_tag('#TAG')  # Single request, no caching
-
-# v3.0.0: High-performance setup  
+# High-performance configuration
 config = ApiConfig(
-    enable_caching=True,     # Automatic caching
-    enable_metrics=True,     # Performance tracking  
-    enable_rate_limiting=True, # Rate limiting (async)
-    max_retries=3           # Auto-retry on failures
+    enable_caching=True,
+    enable_metrics=True,
+    max_retries=3
 )
 
 api = CocApi('token', config=config)
-clan = api.clan_tag('#TAG')  # Cached, monitored, with retry protection
 
 # Async mode with concurrency
 async with CocApi('token', config=config) as api:
-    # Process multiple clans concurrently with rate limiting
     clans = await asyncio.gather(*[
-        api.clan_tag(tag) for tag in clan_tags  # 10x+ faster than sequential
+        api.clan_tag(tag) for tag in clan_tags
     ])
 ```
 
@@ -531,222 +321,47 @@ async with CocApi('token', config=config) as api:
 
 ### 🔄 Upgrading to v3.0.0 - Zero Breaking Changes!
 
-**IMPORTANT: cocapi 3.0.0 maintains 100% backward compatibility. Your existing code will continue to work exactly as before with zero changes required.**
+cocapi 3.0.0 maintains 100% backward compatibility. Your existing code continues to work unchanged:
 
 ```python
-# All existing code continues to work identically in v3.0.0
+# All existing patterns still work
 from cocapi import CocApi
 
-# Old initialization patterns - ALL STILL WORK
-api = CocApi('YOUR_TOKEN')                           # ✅ Works
-api = CocApi('YOUR_TOKEN', 60)                       # ✅ Works  
-api = CocApi('YOUR_TOKEN', 60, True)                 # ✅ Works
-api = CocApi('YOUR_TOKEN', timeout=30, status_code=True)  # ✅ Works
+api = CocApi('YOUR_TOKEN')  # ✅ Works
+api = CocApi('YOUR_TOKEN', 60, True)  # ✅ Works
+clan = api.clan_tag('#CLAN_TAG')  # ✅ Works
 
-# All existing methods - ALL STILL WORK
-clan = api.clan_tag('#CLAN_TAG')                     # ✅ Works
-player = api.players('#PLAYER_TAG')                  # ✅ Works
-locations = api.locations()                          # ✅ Works
-# ... all other methods work identically
-
-# Async usage - ALL STILL WORKS
-async with CocApi('YOUR_TOKEN') as api:              # ✅ Works
-    clan = await api.clan_tag('#CLAN_TAG')           # ✅ Works
-
-# ApiConfig usage - ALL STILL WORKS  
-config = ApiConfig(timeout=60, enable_caching=True)  # ✅ Works
-api = CocApi('YOUR_TOKEN', config=config)            # ✅ Works
-```
-
-### What's Changed in v3.0.0?
-- ✅ **Added** enterprise features (metrics, middleware, enhanced caching)
-- ✅ **Added** custom endpoint support and dynamic Pydantic models  
-- ✅ **Added** base URL configuration with safety warnings
-- ✅ **Enhanced** async support with rate limiting and performance improvements
-- ✅ **Enhanced** error handling with detailed error types and retry logic
-- ✅ **Maintained** 100% backward compatibility
-- ❌ **No breaking changes** - existing code works unchanged
-- ❌ **No deprecated methods** - all existing methods remain
-
-### For Existing Users
-
-### Upgrading to New Features
-
-To take advantage of new features:
-
-```python
-from cocapi import CocApi, ApiConfig
-
-# 1. Add caching to existing code (no changes needed!)
+# To use new features, just add configuration:
 config = ApiConfig(enable_caching=True, cache_ttl=300)
 api = CocApi('YOUR_TOKEN', config=config)
-
-# 2. Use async for better performance (same class!)
-async with CocApi('YOUR_TOKEN') as api:
-    clan = await api.clan_tag('#CLAN_TAG')
-
-# 3. Enhanced error handling is automatic
-result = api.clan_tag('#INVALID_TAG')
-if result.get('result') == 'error':
-    print(f"Error: {result.get('message')}")
 ```
 
----
+## 🚀 What's New in v3.0.0
 
-## 🚀 What's New in v3.0.0 - Major Release
+**Major enterprise features** while maintaining 100% backward compatibility:
 
-**cocapi 3.0.0** is a major release that transforms the library into an enterprise-grade API wrapper while maintaining 100% backward compatibility. This release introduces comprehensive monitoring, middleware system, enhanced performance features, and future-proofing capabilities.
+- **📊 Enterprise Metrics**: Comprehensive API performance monitoring
+- **🔌 Middleware System**: Pluggable request/response processing  
+- **⚡ Enhanced Async**: Rate limiting and improved concurrency
+- **🚀 Custom Endpoints**: Future-proof support for new SuperCell endpoints
+- **🎯 Type Safety**: Enhanced type hints and Pydantic model integration
+- **🌐 Base URL Config**: Support for staging environments and proxies
 
-### 🎯 **Major New Features**
-
-#### 1. **Enterprise Metrics & Analytics** 📊
-Comprehensive API performance monitoring and insights:
-```python
-# Track performance, errors, cache hits, response times
-config = ApiConfig(enable_metrics=True, metrics_window_size=1000)
-api = CocApi('token', config=config)
-
-metrics = api.get_metrics()
-print(f"Cache hit rate: {metrics['cache_hit_rate']:.1%}")
-print(f"Average response time: {metrics['avg_response_time']:.2f}ms")
-print(f"Error rate: {metrics['error_rate']:.1%}")
-
-# Get actionable performance insights
-for insight in metrics['performance_insights']:
-    print(f"💡 {insight}")
-```
-
-#### 2. **Middleware System** 🔌
-Pluggable request/response processing pipeline:
-```python
-from cocapi.middleware import add_user_agent_middleware, add_request_id_middleware
-
-# Add built-in middleware
-api.add_request_middleware(add_user_agent_middleware("MyApp/1.0"))
-api.add_request_middleware(add_request_id_middleware())
-
-# Custom middleware for authentication, logging, monitoring
-def add_custom_headers(url, headers, params):
-    headers['X-API-Version'] = '3.0.0'
-    return url, headers, params
-
-api.add_request_middleware(add_custom_headers)
-```
-
-#### 3. **Advanced Async Features** ⚡
-Enhanced async support with rate limiting and performance optimizations:
-```python
-config = ApiConfig(
-    enable_rate_limiting=True,
-    requests_per_second=10.0,
-    burst_limit=20,
-    enable_caching=True
-)
-
-async with CocApi('token', config=config) as api:
-    # Concurrent requests with automatic rate limiting
-    results = await asyncio.gather(*[
-        api.clan_tag(tag) for tag in clan_tags
-    ])
-```
-
-#### 4. **Custom Endpoint Support** 🔮
-Future-proof with support for any new SuperCell endpoints:
-```python
-# Use ANY new endpoint immediately without library updates
-result = api.custom_endpoint('/new-supercell-feature')
-result = api.custom_endpoint('/hypothetical-endpoint/v2', {'param': 'value'})
-
-# With dynamic Pydantic models for type safety
-result = api.custom_endpoint('/new-endpoint', use_dynamic_model=True)
-print(result.some_field)  # Type-safe attribute access
-```
-
-### 📈 **Performance & Reliability Improvements**
-
-- **📊 Comprehensive Metrics**: Track response times, error rates, cache performance, and endpoint usage
-- **🔌 Middleware Pipeline**: Extensible request/response processing with minimal overhead  
-- **⚡ Enhanced Async**: Rate limiting, connection pooling, and improved concurrency handling
-- **💾 Smart Caching**: Detailed statistics, TTL management, and memory usage tracking
-- **🛡️ Better Error Handling**: Specific error types, retry logic, and detailed error messages
-- **🎯 Type Safety**: Enhanced type hints and optional Pydantic model integration
-- **📝 Audit Logging**: Comprehensive logging for configuration changes and operations
-
-### 🛡️ **Safety & Security Features**
-
-- **🔒 Safe URL Changes**: Mandatory `force=True` parameter prevents accidental base URL changes
-- **✅ URL Validation**: Strict validation of endpoint URLs and HTTP/HTTPS scheme enforcement  
-- **⚠️ Clear Warnings**: Comprehensive warnings about configuration changes and potential risks
-- **📋 Request Validation**: Parameter validation and sanitization for all API calls
-- **🔄 Graceful Degradation**: Fallback mechanisms when optional features are unavailable
-
-### 🔄 **100% Backward Compatibility**
-
-**Your existing code works unchanged:**
-```python
-# All existing code continues to work exactly the same
-from cocapi import CocApi
-api = CocApi('YOUR_TOKEN', 30, True)
-clan = api.clan_tag('#CLAN_TAG')
-# Zero changes needed!
-```
-
-### 🎉 **What This Means for Developers**
-
-1. **📊 Data-Driven**: Make informed decisions with comprehensive API metrics and performance insights
-2. **🔌 Extensible**: Add custom functionality through the middleware system without modifying core code  
-3. **⚡ High-Performance**: Handle high-throughput scenarios with async rate limiting and intelligent caching
-4. **🔮 Future-Proof**: Never wait for library updates when SuperCell adds new endpoints
-5. **🛡️ Production-Ready**: Enterprise-grade reliability with monitoring, retry logic, and error handling
-6. **🎯 Type-Safe**: Enhanced IDE support and validation for better development experience
-7. **🌐 Testing-Ready**: Easily test against staging environments, proxies, or mock servers
-8. **🔄 Zero Migration**: Existing applications need no changes to benefit from new features
-
-### 📦 **Installation**
-
+### Installation
 ```bash
-# Upgrade to 3.0.0 (100% backward compatible)
 pip install --upgrade cocapi
-
-# Or with Pydantic models support
+# Or with Pydantic support:
 pip install --upgrade 'cocapi[pydantic]'
 ```
 
----
-
 ## Previous Releases
 
-### What's New in v2.2.x
+**v2.2.x**: Pydantic models, enhanced type safety, async + Pydantic support  
+**v2.1.x**: Unified async support, intelligent caching, retry logic, enhanced configuration
 
-🆕 **v2.2.0-2.2.4 Features:**
-- **Optional Pydantic Models**: Type-safe, validated data structures with IDE support
-- **Enhanced Type Safety**: Full Pydantic model support for `Clan`, `Player`, and all API responses
-- **Flexible Configuration**: Enable/disable Pydantic models via `ApiConfig.use_pydantic_models`
-- **Lazy Loading**: Zero impact when not using models (automatic imports)
-- **Async + Pydantic**: Full async support with Pydantic model validation
-- **Comprehensive Models**: 15+ Pydantic models covering all API response types
+## Full API Reference
 
-## What's New in v2.1.0+
-
-✨ **Major New Features:**
-- **Unified Async Support**: Same `CocApi` class works for both sync and async!
-- **Intelligent Caching**: Automatic response caching with configurable TTL
-- **Retry Logic**: Exponential backoff for handling temporary API failures
-- **Enhanced Configuration**: Flexible settings via ApiConfig class
-- **Better Error Handling**: Comprehensive error messages and types
-- **Type Hints**: Complete type annotations for better IDE support
-- **Rate Limiting Protection**: Built-in handling of API rate limits
-- **🆕 Optional Pydantic Models**: Type-safe, validated data structures with IDE support
-
-🔧 **Code Quality Improvements:**
-- Fixed all mutable default arguments
-- Added comprehensive logging
-- Improved test coverage
-- Enhanced documentation
-
-📚 **Full API Reference**
-
-The following sections document all available API methods. All methods work identically in both sync and async modes - just use `await` when in async context!
+All methods work identically in both sync and async modes - just use `await` when in async context!
 
 ---
 
