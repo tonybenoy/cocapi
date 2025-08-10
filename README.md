@@ -12,7 +12,7 @@
     </a>
 </p>
 
-# ClashOfClansAPI v3.0.0
+# ClashOfClansAPI
 
 A high-performance Python wrapper for SuperCell's Clash of Clans API with enterprise-grade features including async support, response caching, retry logic, middleware system, and comprehensive metrics.
 
