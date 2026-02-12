@@ -1,0 +1,328 @@
+"""Tests for event watchers."""
+
+import asyncio
+
+import pytest
+from unittest.mock import AsyncMock, patch
+
+from cocapi import CocApi
+from cocapi.events._state import PollingState
+from cocapi.events._types import Event, EventType
+from cocapi.events._watchers import ClanWatcher, PlayerWatcher, WarWatcher
+
+
+@pytest.fixture()
+def api():
+    with patch.object(CocApi, "test", return_value={"result": "success"}):
+        api = CocApi("fake_token")
+        api.async_mode = True
+        return api
+
+
+@pytest.fixture()
+def state():
+    return PollingState()
+
+
+@pytest.fixture()
+def queue():
+    return asyncio.Queue()
+
+
+# ---------------------------------------------------------------------------
+# ClanWatcher
+# ---------------------------------------------------------------------------
+
+
+class TestClanWatcher:
+    @pytest.mark.asyncio
+    async def test_first_poll_no_diff_events(self, api, state, queue):
+        clan_data = {
+            "tag": "#A",
+            "name": "TestClan",
+            "clanLevel": 10,
+            "memberList": [{"tag": "#M1", "name": "Alice"}],
+        }
+        api.clan_tag = AsyncMock(return_value=clan_data)
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 0
+        assert state.get_clan("#A") is not None
+
+    @pytest.mark.asyncio
+    async def test_clan_level_change(self, api, state, queue):
+        old = {"tag": "#A", "name": "Test", "clanLevel": 10, "memberList": []}
+        new = {"tag": "#A", "name": "Test", "clanLevel": 11, "memberList": []}
+
+        state.set_clan("#A", old)
+        state.set_members("#A", [])
+        api.clan_tag = AsyncMock(return_value=new)
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        clan_events = [e for e in events if e.event_type == EventType.CLAN_UPDATED]
+        assert len(clan_events) == 1
+        changes = {c.field: (c.old_value, c.new_value) for c in clan_events[0].changes}
+        assert changes["clanLevel"] == (10, 11)
+
+    @pytest.mark.asyncio
+    async def test_member_join(self, api, state, queue):
+        old_data = {"tag": "#A", "name": "Test", "memberList": [{"tag": "#M1", "name": "Alice"}]}
+        new_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [
+                {"tag": "#M1", "name": "Alice"},
+                {"tag": "#M2", "name": "Bob"},
+            ],
+        }
+        state.set_clan("#A", old_data)
+        state.set_members("#A", old_data["memberList"])
+        api.clan_tag = AsyncMock(return_value=new_data)
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        joins = [e for e in events if e.event_type == EventType.MEMBER_JOINED]
+        assert len(joins) == 1
+        assert joins[0].metadata["member_tag"] == "#M2"
+
+    @pytest.mark.asyncio
+    async def test_member_leave(self, api, state, queue):
+        old_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [
+                {"tag": "#M1", "name": "Alice"},
+                {"tag": "#M2", "name": "Bob"},
+            ],
+        }
+        new_data = {"tag": "#A", "name": "Test", "memberList": [{"tag": "#M1", "name": "Alice"}]}
+        state.set_clan("#A", old_data)
+        state.set_members("#A", old_data["memberList"])
+        api.clan_tag = AsyncMock(return_value=new_data)
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        leaves = [e for e in events if e.event_type == EventType.MEMBER_LEFT]
+        assert len(leaves) == 1
+        assert leaves[0].metadata["member_tag"] == "#M2"
+
+    @pytest.mark.asyncio
+    async def test_member_update(self, api, state, queue):
+        old_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [{"tag": "#M1", "name": "Alice", "trophies": 100}],
+        }
+        new_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [{"tag": "#M1", "name": "Alice", "trophies": 200}],
+        }
+        state.set_clan("#A", old_data)
+        state.set_members("#A", old_data["memberList"])
+        api.clan_tag = AsyncMock(return_value=new_data)
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        updates = [e for e in events if e.event_type == EventType.MEMBER_UPDATED]
+        assert len(updates) == 1
+        assert updates[0].metadata["member_tag"] == "#M1"
+
+    @pytest.mark.asyncio
+    async def test_api_error(self, api, state, queue):
+        api.clan_tag = AsyncMock(
+            return_value={"result": "error", "message": "Not found"}
+        )
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        assert events[0].event_type == EventType.POLL_ERROR
+        assert events[0].tag == "#A"
+
+    @pytest.mark.asyncio
+    async def test_no_member_tracking(self, api, state, queue):
+        data = {"tag": "#A", "name": "Test", "memberList": [{"tag": "#M1"}]}
+        state.set_clan("#A", data)
+        api.clan_tag = AsyncMock(return_value=data)
+
+        watcher = ClanWatcher(
+            api, state, queue, ["#A"], interval=1.0, track_members=False
+        )
+        events = await watcher._poll_once()
+        assert len(events) == 0
+        assert state.get_members("#A") is None
+
+
+# ---------------------------------------------------------------------------
+# WarWatcher
+# ---------------------------------------------------------------------------
+
+
+class TestWarWatcher:
+    @pytest.mark.asyncio
+    async def test_war_state_transition(self, api, state, queue):
+        state.set_war("#A", {"state": "notInWar"})
+        api.clan_current_war = AsyncMock(
+            return_value={"state": "preparation", "teamSize": 15}
+        )
+
+        watcher = WarWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        state_events = [e for e in events if e.event_type == EventType.WAR_STATE_CHANGED]
+        assert len(state_events) == 1
+        assert state_events[0].metadata["war_state_from"] == "notInWar"
+        assert state_events[0].metadata["war_state_to"] == "preparation"
+
+    @pytest.mark.asyncio
+    async def test_no_event_same_state(self, api, state, queue):
+        state.set_war("#A", {"state": "inWar"})
+        fsm = state.get_war_fsm("#A")
+        fsm.transition("inWar")
+
+        api.clan_current_war = AsyncMock(return_value={"state": "inWar"})
+
+        watcher = WarWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        state_events = [e for e in events if e.event_type == EventType.WAR_STATE_CHANGED]
+        assert len(state_events) == 0
+
+    @pytest.mark.asyncio
+    async def test_new_attack_detected(self, api, state, queue):
+        old_war = {
+            "state": "inWar",
+            "clan": {
+                "members": [
+                    {"tag": "#P1", "attacks": [{"attackerTag": "#P1", "order": 1, "stars": 2, "defenderTag": "#D1"}]}
+                ],
+            },
+            "opponent": {"members": []},
+        }
+        new_war = {
+            "state": "inWar",
+            "clan": {
+                "members": [
+                    {
+                        "tag": "#P1",
+                        "attacks": [
+                            {"attackerTag": "#P1", "order": 1, "stars": 2, "defenderTag": "#D1"},
+                            {"attackerTag": "#P1", "order": 2, "stars": 3, "defenderTag": "#D2"},
+                        ],
+                    }
+                ],
+            },
+            "opponent": {"members": []},
+        }
+        state.set_war("#A", old_war)
+        fsm = state.get_war_fsm("#A")
+        fsm.transition("inWar")
+        api.clan_current_war = AsyncMock(return_value=new_war)
+
+        watcher = WarWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        attacks = [e for e in events if e.event_type == EventType.WAR_ATTACK_NEW]
+        assert len(attacks) == 1
+        assert attacks[0].metadata["stars"] == 3
+
+    @pytest.mark.asyncio
+    async def test_war_api_error(self, api, state, queue):
+        api.clan_current_war = AsyncMock(
+            return_value={"result": "error", "message": "Access denied"}
+        )
+
+        watcher = WarWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        assert events[0].event_type == EventType.POLL_ERROR
+
+
+# ---------------------------------------------------------------------------
+# PlayerWatcher
+# ---------------------------------------------------------------------------
+
+
+class TestPlayerWatcher:
+    @pytest.mark.asyncio
+    async def test_first_poll_no_events(self, api, state, queue):
+        api.players = AsyncMock(return_value={"tag": "#P1", "trophies": 5000})
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 0
+        assert state.get_player("#P1") is not None
+
+    @pytest.mark.asyncio
+    async def test_player_change(self, api, state, queue):
+        state.set_player("#P1", {"tag": "#P1", "trophies": 5000, "name": "Alice"})
+        api.players = AsyncMock(
+            return_value={"tag": "#P1", "trophies": 5100, "name": "Alice"}
+        )
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        assert events[0].event_type == EventType.PLAYER_UPDATED
+        changes = {c.field: c.new_value for c in events[0].changes}
+        assert changes["trophies"] == 5100
+
+    @pytest.mark.asyncio
+    async def test_include_fields(self, api, state, queue):
+        state.set_player("#P1", {"tag": "#P1", "trophies": 5000, "donations": 100})
+        api.players = AsyncMock(
+            return_value={"tag": "#P1", "trophies": 5100, "donations": 200}
+        )
+
+        watcher = PlayerWatcher(
+            api, state, queue, ["#P1"],
+            interval=1.0,
+            include_fields=frozenset({"trophies"}),
+        )
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        fields = {c.field for c in events[0].changes}
+        assert fields == {"trophies"}
+
+    @pytest.mark.asyncio
+    async def test_exclude_fields(self, api, state, queue):
+        state.set_player("#P1", {"tag": "#P1", "trophies": 5000, "donations": 100})
+        api.players = AsyncMock(
+            return_value={"tag": "#P1", "trophies": 5100, "donations": 200}
+        )
+
+        watcher = PlayerWatcher(
+            api, state, queue, ["#P1"],
+            interval=1.0,
+            exclude_fields=frozenset({"donations"}),
+        )
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        fields = {c.field for c in events[0].changes}
+        assert fields == {"trophies"}
+
+    @pytest.mark.asyncio
+    async def test_player_api_error(self, api, state, queue):
+        api.players = AsyncMock(
+            return_value={"result": "error", "message": "Not found"}
+        )
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        assert events[0].event_type == EventType.POLL_ERROR

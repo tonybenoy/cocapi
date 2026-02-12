@@ -278,6 +278,89 @@ async with CocApi("token") as api:
 
 If one call fails, its position in the result list gets the error dict. Other calls are unaffected.
 
+## Event Polling
+
+Monitor clans, wars, and players in real time with poll-and-compare. Async only.
+
+```python
+import asyncio
+from cocapi import CocApi, ApiConfig
+from cocapi.events import EventStream, EventType
+
+async def main():
+    async with CocApi("token", config=ApiConfig(enable_caching=False)) as api:
+        stream = EventStream(api)
+        stream.watch_clans(["#2PP"], interval=60)
+        stream.watch_wars(["#2PP"], interval=30)
+        stream.watch_players(["#900PUCPV"], interval=120)
+
+        async with stream:
+            async for event in stream:
+                print(event.event_type, event.tag)
+                for change in event.changes:
+                    print(f"  {change.field}: {change.old_value} -> {change.new_value}")
+
+asyncio.run(main())
+```
+
+### Event Types
+
+| Event | Trigger |
+|---|---|
+| `CLAN_UPDATED` | Any clan field changed (level, points, description, etc.) |
+| `MEMBER_JOINED` | New member detected in clan |
+| `MEMBER_LEFT` | Member no longer in clan |
+| `MEMBER_UPDATED` | Existing member's data changed (trophies, donations, etc.) |
+| `WAR_STATE_CHANGED` | War state transition (notInWar → preparation → inWar → warEnded) |
+| `WAR_ATTACK_NEW` | New attack detected in an active or ended war |
+| `PLAYER_UPDATED` | Any tracked player field changed |
+| `POLL_ERROR` | API error during polling (watcher continues) |
+
+### Callbacks
+
+Use decorators instead of (or alongside) the async generator:
+
+```python
+stream = EventStream(api)
+stream.watch_clans(["#2PP"])
+
+@stream.on(EventType.MEMBER_JOINED)
+async def on_join(event):
+    print(f"{event.metadata['member_name']} joined {event.tag}!")
+
+@stream.on(EventType.WAR_STATE_CHANGED)
+async def on_war(event):
+    print(f"War: {event.metadata['war_state_from']} -> {event.metadata['war_state_to']}")
+
+await stream.run()  # Blocks, dispatches to callbacks
+```
+
+### Options
+
+- **Field filtering** for player watchers: `watch_players(tags, include_fields=frozenset({"trophies"}))` or `exclude_fields`
+- **Member tracking**: `watch_clans(tags, track_members=False)` to skip join/leave/update detection
+- **Backpressure**: `EventStream(api, queue_size=1000)` — bounded queue prevents unbounded memory growth
+- **State persistence**: `EventStream(api, persist_path="state.json")` — saves snapshots on stop, restores on start
+
+## Examples
+
+Runnable scripts in the [`examples/`](examples/) folder:
+
+| Script | What it covers |
+|---|---|
+| [`basic_usage.py`](examples/basic_usage.py) | Sync: clan info, player info, search, error handling |
+| [`async_usage.py`](examples/async_usage.py) | Async with context manager, concurrent requests |
+| [`credential_auth.py`](examples/credential_auth.py) | Email/password login, key persistence, auto-refresh |
+| [`pagination_batch.py`](examples/pagination_batch.py) | `paginate()` and `batch()` in sync and async |
+| [`event_polling.py`](examples/event_polling.py) | `EventStream` with `async for` — real-time monitoring |
+| [`event_callbacks.py`](examples/event_callbacks.py) | `@stream.on()` decorators and `stream.run()` |
+| [`configuration.py`](examples/configuration.py) | ApiConfig, caching, metrics, middleware |
+
+```bash
+# Run any example (replace the token inside first)
+python examples/basic_usage.py
+```
+
 ## CLI
 
 Install with the `cli` extra:

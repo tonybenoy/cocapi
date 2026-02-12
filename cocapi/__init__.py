@@ -49,6 +49,9 @@ from .client import CocApi
 # Configuration classes
 from .config import ApiConfig, CacheEntry, RequestMetric
 
+# Event polling system
+from .events import Change, Event, EventStream, EventType, WarState
+
 # Key management (credential-based auth)
 from .key_manager import (
     AsyncKeyManager,
@@ -160,6 +163,12 @@ __all__ = [
     "add_debug_logging_middleware",
     "add_response_timestamp_middleware",
     "add_response_size_middleware",
+    # Event polling
+    "EventStream",
+    "Event",
+    "EventType",
+    "Change",
+    "WarState",
     # Version info
     "__version__",
     "__author__",
