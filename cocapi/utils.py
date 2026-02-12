@@ -3,7 +3,7 @@ Utility functions for cocapi
 """
 
 import urllib.parse
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 
 def clean_tag(tag: str) -> str:
@@ -12,7 +12,7 @@ def clean_tag(tag: str) -> str:
 
 
 def build_url(
-    base_url: str, endpoint: str, params: Optional[Dict[str, Any]] = None
+    base_url: str, endpoint: str, params: dict[str, Any] | None = None
 ) -> str:
     """Build a complete URL with parameters"""
     if params:
@@ -25,7 +25,7 @@ def build_url(
 
 
 def validate_params(
-    params: Optional[Dict[str, Any]], valid_params: Tuple[str, ...]
+    params: dict[str, Any] | None, valid_params: tuple[str, ...]
 ) -> bool:
     """Validate that all parameters are in the allowed list"""
     if not params:
@@ -33,7 +33,7 @@ def validate_params(
     return all(param in valid_params for param in params.keys())
 
 
-def get_cache_key(url: str, params: Optional[Dict[str, Any]] = None) -> str:
+def get_cache_key(url: str, params: dict[str, Any] | None = None) -> str:
     """Generate a cache key from URL and parameters"""
     if params:
         sorted_params = sorted(params.items())

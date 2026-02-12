@@ -281,5 +281,134 @@ class TestApiConfig:
             assert getattr(config, key) == expected_value
 
 
+class TestDeprecatedEndpoints:
+    """Test deprecated endpoint wrapper behavior"""
+
+    def test_deprecated_returns_deprecation_on_404(self, test_helpers):
+        """404 errors should produce a deprecation notice"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token", status_code=True)
+
+            with patch("cocapi.client.httpx.get") as mock_get:
+                mock_get.return_value = test_helpers.create_error_response(404, "")
+                result = api.location_clan_versus("32000087")
+
+                assert result["result"] == "error"
+                assert result["error_type"] == "deprecated"
+                assert "deprecated" in result["message"].lower()
+
+    def test_deprecated_returns_deprecation_on_410(self, test_helpers):
+        """410 errors should produce a deprecation notice"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token", status_code=True)
+
+            with patch("cocapi.client.httpx.get") as mock_get:
+                mock_get.return_value = test_helpers.create_error_response(410, "")
+                result = api.location_player_versus("32000087")
+
+                assert result["result"] == "error"
+                assert result["error_type"] == "deprecated"
+
+    def test_deprecated_preserves_403_error(self, test_helpers):
+        """403 errors should NOT be masked as deprecated"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token", status_code=True)
+
+            with patch("cocapi.client.httpx.get") as mock_get:
+                mock_get.return_value = test_helpers.create_error_response(403, "")
+                result = api.location_clan_versus("32000087")
+
+                assert result["result"] == "error"
+                assert result["error_type"] == "http"
+                assert result.get("error_type") != "deprecated"
+
+    def test_deprecated_preserves_429_error(self, test_helpers):
+        """429 rate-limit errors should NOT be masked as deprecated"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token", status_code=True)
+
+            with patch("cocapi.client.httpx.get") as mock_get, patch("time.sleep"):
+                mock_get.return_value = test_helpers.create_error_response(429, "")
+                result = api.location_player_versus("32000087")
+
+                assert result["result"] == "error"
+                assert result["error_type"] == "http"
+
+    def test_deprecated_passes_through_success(self, test_helpers):
+        """Successful responses should be returned unchanged"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token")
+
+            with patch("cocapi.client.httpx.get") as mock_get:
+                mock_get.return_value = test_helpers.create_mock_response(
+                    json_data={"items": [{"tag": "#A"}]}
+                )
+                result = api.location_clan_versus("32000087")
+
+                assert "items" in result
+                assert result["items"][0]["tag"] == "#A"
+
+
+class TestPostEndpoints:
+    """Test POST endpoints (verify_player_token)"""
+
+    def test_verify_player_token_success(self, test_helpers):
+        """Test successful token verification"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token")
+
+            with patch("cocapi.client.httpx.post") as mock_post:
+                mock_post.return_value = test_helpers.create_mock_response(
+                    json_data={"tag": "#PLAYER", "token": "abc", "status": "ok"}
+                )
+                result = api.verify_player_token("#PLAYER", "abc")
+
+                assert result["tag"] == "#PLAYER"
+                assert result["status"] == "ok"
+
+                # Verify POST was called with correct body
+                call_kwargs = mock_post.call_args
+                assert call_kwargs.kwargs["json"] == {"token": "abc"}
+
+    def test_verify_player_token_url_construction(self, test_helpers):
+        """Test that the URL is properly constructed with encoded tag"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token")
+
+            with patch("cocapi.client.httpx.post") as mock_post:
+                mock_post.return_value = test_helpers.create_mock_response(
+                    json_data={"tag": "#PLAYER", "status": "ok"}
+                )
+                api.verify_player_token("#PLAYER", "test_token")
+
+                called_url = mock_post.call_args[0][0]
+                assert "/players/%23PLAYER/verifytoken" in called_url
+
+    def test_verify_player_token_http_error(self, test_helpers):
+        """Test token verification with HTTP error"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token")
+
+            with patch("cocapi.client.httpx.post") as mock_post:
+                mock_post.return_value = test_helpers.create_error_response(404, "")
+                result = api.verify_player_token("#INVALID", "abc")
+
+                assert result["result"] == "error"
+
+    def test_verify_player_token_with_status_code(self, test_helpers):
+        """Test that status_code flag works with POST endpoints"""
+        with patch.object(CocApi, "test", return_value={"result": "success"}):
+            api = CocApi("token", status_code=True)
+
+            with patch("cocapi.client.httpx.post") as mock_post:
+                mock_post.return_value = test_helpers.create_mock_response(
+                    json_data={"tag": "#PLAYER", "status": "ok"}
+                )
+                result = api.verify_player_token("#PLAYER", "abc")
+
+                assert "status_code" in result
+                assert result["status_code"] == 200
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

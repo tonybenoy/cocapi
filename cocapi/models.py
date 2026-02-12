@@ -3,7 +3,7 @@ Pydantic model generation for cocapi responses
 """
 
 import logging
-from typing import Any, Dict, Union
+from typing import Any
 
 try:
     from pydantic import BaseModel, create_model
@@ -15,10 +15,13 @@ except ImportError:
 
 
 def create_dynamic_model(
-    response: Dict[str, Any], endpoint_type: str
-) -> Union[Dict[str, Any], Any]:
+    response: dict[str, Any], endpoint_type: str
+) -> dict[str, Any] | Any:
     """
-    Create a dynamic Pydantic model from JSON response
+    Create a Pydantic model from JSON response.
+
+    First tries to match a concrete model from the schema registry.
+    Falls back to dynamic model generation for unknown endpoints.
 
     Args:
         response: The JSON response data
@@ -34,17 +37,21 @@ def create_dynamic_model(
     if response.get("result") == "error":
         return response
 
+    # 1. Try concrete model from schema registry
     try:
-        # Generate model name
+        from .model_registry import resolve_response
+
+        resolved = resolve_response(response, endpoint_type)
+        if resolved is not None:
+            return resolved
+    except ImportError:
+        pass  # schemas not installed, fall through to dynamic
+
+    # 2. Fallback to dynamic model generation
+    try:
         model_name = _generate_model_name(endpoint_type)
-
-        # Determine field types from response
         field_definitions = _analyze_response_structure(response)
-
-        # Create dynamic model
         DynamicModel = create_model(model_name, **field_definitions)
-
-        # Create and return model instance
         return DynamicModel(**response)
 
     except Exception as e:
@@ -61,7 +68,7 @@ def _generate_model_name(endpoint_type: str) -> str:
     return "".join(word.capitalize() for word in parts if word) + "Model"
 
 
-def _analyze_response_structure(data: Any, depth: int = 0) -> Dict[str, Any]:
+def _analyze_response_structure(data: Any, depth: int = 0) -> dict[str, Any]:
     """Analyze response structure to determine field types"""
     if depth > 5:  # Prevent infinite recursion
         return {"value": (Any, ...)}
@@ -117,7 +124,7 @@ def validate_pydantic_available() -> bool:
     return PYDANTIC_AVAILABLE
 
 
-def get_pydantic_info() -> Dict[str, Any]:
+def get_pydantic_info() -> dict[str, Any]:
     """Get information about Pydantic availability and version"""
     if not PYDANTIC_AVAILABLE:
         return {

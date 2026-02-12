@@ -1,25 +1,23 @@
 [project]
 name = "cocapi"
-version = "3.0.1"
+version = "3.1.0"
 description = "A python wrapper around clash of clans api"
 readme = "README.md"
 authors = [{ name = "Tony Benoy", email = "me@tonybenoy.com" }]
 license = { text = "GPL-3.0" }
-requires-python = ">=3.7.2"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 keywords = ["clash", "clans", "api", "wrapper", "supercell"]
-dependencies = ["httpx>=0.23.0,<1.0.0"]
+dependencies = ["httpx>=0.23.0"]
 
 [project.optional-dependencies]
 pydantic = ["pydantic>=2.0.0"]
@@ -31,9 +29,12 @@ Issues = "https://github.com/tonybenoy/cocapi/issues"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build]
+exclude = ["scripts/"]
 [tool.ruff]
 line-length = 88
-target-version = "py37"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [

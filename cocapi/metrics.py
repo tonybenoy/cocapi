@@ -4,7 +4,7 @@ Request metrics tracking for cocapi
 
 import time
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .config import RequestMetric
 from .utils import format_endpoint_for_metrics
@@ -21,7 +21,7 @@ class MetricsTracker:
             max_metrics: Maximum number of metrics to store (oldest are removed)
         """
         self.max_metrics = max_metrics
-        self.metrics: List[RequestMetric] = []
+        self.metrics: list[RequestMetric] = []
         self._enabled = False
 
     def enable(self) -> None:
@@ -43,7 +43,7 @@ class MetricsTracker:
         status_code: int,
         response_time: float,
         cache_hit: bool,
-        error_type: Optional[str] = None,
+        error_type: str | None = None,
     ) -> None:
         """Record metrics for a request if metrics are enabled"""
         if not self._enabled:
@@ -68,7 +68,7 @@ class MetricsTracker:
         if len(self.metrics) > self.max_metrics:
             self.metrics = self.metrics[-self.max_metrics :]
 
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get comprehensive metrics summary"""
         if not self.metrics:
             return {"total_requests": 0, "message": "No metrics available"}
@@ -87,7 +87,7 @@ class MetricsTracker:
         avg_response_time = sum(m.response_time for m in self.metrics) / total_requests
 
         # Most used endpoints
-        endpoint_counts: Dict[str, int] = defaultdict(int)
+        endpoint_counts: dict[str, int] = defaultdict(int)
         for metric in self.metrics:
             endpoint_counts[metric.endpoint] += 1
 
@@ -96,13 +96,13 @@ class MetricsTracker:
         )[:5]
 
         # Error breakdown
-        error_counts: Dict[str, int] = defaultdict(int)
+        error_counts: dict[str, int] = defaultdict(int)
         for metric in self.metrics:
             if metric.error_type:
                 error_counts[metric.error_type] += 1
 
         # Status code breakdown
-        status_counts: Dict[int, int] = defaultdict(int)
+        status_counts: dict[int, int] = defaultdict(int)
         for metric in self.metrics:
             status_counts[metric.status_code] += 1
 
@@ -127,7 +127,7 @@ class MetricsTracker:
             },
         }
 
-    def get_endpoint_metrics(self, endpoint: str) -> Dict[str, Any]:
+    def get_endpoint_metrics(self, endpoint: str) -> dict[str, Any]:
         """Get metrics for a specific endpoint"""
         formatted_endpoint = format_endpoint_for_metrics(endpoint)
         endpoint_metrics = [m for m in self.metrics if m.endpoint == formatted_endpoint]
@@ -165,7 +165,7 @@ class MetricsTracker:
             "response_time_percentiles": percentiles,
         }
 
-    def get_recent_errors(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_recent_errors(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent error requests"""
         error_metrics = [
             m for m in self.metrics if m.status_code >= 400 or m.error_type
@@ -190,12 +190,12 @@ class MetricsTracker:
         """Clear all stored metrics"""
         self.metrics.clear()
 
-    def _calculate_percentiles(self, sorted_values: List[float]) -> Dict[str, float]:
+    def _calculate_percentiles(self, sorted_values: list[float]) -> dict[str, float]:
         """Calculate response time percentiles"""
         if not sorted_values:
             return {}
 
-        def percentile(values: List[float], p: float) -> float:
+        def percentile(values: list[float], p: float) -> float:
             if not values:
                 return 0.0
             k = (len(values) - 1) * p
@@ -233,7 +233,7 @@ class MetricsTracker:
 
         return "\n".join(lines)
 
-    def get_performance_insights(self) -> Dict[str, Any]:
+    def get_performance_insights(self) -> dict[str, Any]:
         """Get performance insights and recommendations"""
         if not self.metrics:
             return {"message": "No metrics available for insights"}
@@ -299,7 +299,7 @@ class MetricsTracker:
             "recommendations": self._generate_recommendations(insights),
         }
 
-    def _generate_recommendations(self, insights: List[Dict[str, Any]]) -> List[str]:
+    def _generate_recommendations(self, insights: list[dict[str, Any]]) -> list[str]:
         """Generate actionable recommendations based on insights"""
         recommendations = []
 

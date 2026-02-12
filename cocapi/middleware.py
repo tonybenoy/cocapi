@@ -3,26 +3,27 @@ Middleware system for cocapi request/response processing
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Tuple
+from collections.abc import Callable
+from typing import Any
 
 
 class MiddlewareManager:
     """Manages request and response middleware"""
 
     def __init__(self) -> None:
-        self.request_middleware: List[
+        self.request_middleware: list[
             Callable[
-                [str, Dict[str, str], Dict[str, Any]],
-                Tuple[str, Dict[str, str], Dict[str, Any]],
+                [str, dict[str, str], dict[str, Any]],
+                tuple[str, dict[str, str], dict[str, Any]],
             ]
         ] = []
-        self.response_middleware: List[Callable[[Dict[str, Any]], Dict[str, Any]]] = []
+        self.response_middleware: list[Callable[[dict[str, Any]], dict[str, Any]]] = []
 
     def add_request_middleware(
         self,
         middleware: Callable[
-            [str, Dict[str, str], Dict[str, Any]],
-            Tuple[str, Dict[str, str], Dict[str, Any]],
+            [str, dict[str, str], dict[str, Any]],
+            tuple[str, dict[str, str], dict[str, Any]],
         ],
     ) -> None:
         """
@@ -42,7 +43,7 @@ class MiddlewareManager:
         self.request_middleware.append(middleware)
 
     def add_response_middleware(
-        self, middleware: Callable[[Dict[str, Any]], Dict[str, Any]]
+        self, middleware: Callable[[dict[str, Any]], dict[str, Any]]
     ) -> None:
         """
         Add middleware function to process responses after they're received.
@@ -60,8 +61,8 @@ class MiddlewareManager:
         self.response_middleware.append(middleware)
 
     def apply_request_middleware(
-        self, url: str, headers: Dict[str, str], params: Dict[str, Any]
-    ) -> Tuple[str, Dict[str, str], Dict[str, Any]]:
+        self, url: str, headers: dict[str, str], params: dict[str, Any]
+    ) -> tuple[str, dict[str, str], dict[str, Any]]:
         """Apply all request middleware in order"""
         for middleware in self.request_middleware:
             try:
@@ -70,7 +71,7 @@ class MiddlewareManager:
                 logging.warning(f"Request middleware failed: {e}")
         return url, headers, params
 
-    def apply_response_middleware(self, response: Dict[str, Any]) -> Dict[str, Any]:
+    def apply_response_middleware(self, response: dict[str, Any]) -> dict[str, Any]:
         """Apply all response middleware in order"""
         for middleware in self.response_middleware:
             try:
@@ -92,7 +93,7 @@ class MiddlewareManager:
         self.clear_request_middleware()
         self.clear_response_middleware()
 
-    def get_middleware_info(self) -> Dict[str, Any]:
+    def get_middleware_info(self) -> dict[str, Any]:
         """Get information about registered middleware"""
         return {
             "request_middleware_count": len(self.request_middleware),
@@ -110,13 +111,13 @@ class MiddlewareManager:
 def add_user_agent_middleware(
     user_agent: str,
 ) -> Callable[
-    [str, Dict[str, str], Dict[str, Any]], Tuple[str, Dict[str, str], Dict[str, Any]]
+    [str, dict[str, str], dict[str, Any]], tuple[str, dict[str, str], dict[str, Any]]
 ]:
     """Create middleware that adds custom User-Agent header"""
 
     def middleware(
-        url: str, headers: Dict[str, str], params: Dict[str, Any]
-    ) -> Tuple[str, Dict[str, str], Dict[str, Any]]:
+        url: str, headers: dict[str, str], params: dict[str, Any]
+    ) -> tuple[str, dict[str, str], dict[str, Any]]:
         headers = headers.copy()
         headers["User-Agent"] = user_agent
         return url, headers, params
@@ -126,14 +127,14 @@ def add_user_agent_middleware(
 
 
 def add_request_id_middleware() -> Callable[
-    [str, Dict[str, str], Dict[str, Any]], Tuple[str, Dict[str, str], Dict[str, Any]]
+    [str, dict[str, str], dict[str, Any]], tuple[str, dict[str, str], dict[str, Any]]
 ]:
     """Create middleware that adds unique request ID to headers"""
     import uuid
 
     def middleware(
-        url: str, headers: Dict[str, str], params: Dict[str, Any]
-    ) -> Tuple[str, Dict[str, str], Dict[str, Any]]:
+        url: str, headers: dict[str, str], params: dict[str, Any]
+    ) -> tuple[str, dict[str, str], dict[str, Any]]:
         headers = headers.copy()
         headers["X-Request-ID"] = str(uuid.uuid4())
         return url, headers, params
@@ -143,13 +144,13 @@ def add_request_id_middleware() -> Callable[
 
 
 def add_debug_logging_middleware() -> Callable[
-    [str, Dict[str, str], Dict[str, Any]], Tuple[str, Dict[str, str], Dict[str, Any]]
+    [str, dict[str, str], dict[str, Any]], tuple[str, dict[str, str], dict[str, Any]]
 ]:
     """Create middleware that logs request details"""
 
     def middleware(
-        url: str, headers: Dict[str, str], params: Dict[str, Any]
-    ) -> Tuple[str, Dict[str, str], Dict[str, Any]]:
+        url: str, headers: dict[str, str], params: dict[str, Any]
+    ) -> tuple[str, dict[str, str], dict[str, Any]]:
         logging.debug(f"API Request: {url}")
         logging.debug(f"Headers: {headers}")
         logging.debug(f"Params: {params}")
@@ -159,11 +160,11 @@ def add_debug_logging_middleware() -> Callable[
     return middleware
 
 
-def add_response_timestamp_middleware() -> Callable[[Dict[str, Any]], Dict[str, Any]]:
+def add_response_timestamp_middleware() -> Callable[[dict[str, Any]], dict[str, Any]]:
     """Create middleware that adds processing timestamp to response"""
     import time
 
-    def middleware(response: Dict[str, Any]) -> Dict[str, Any]:
+    def middleware(response: dict[str, Any]) -> dict[str, Any]:
         if isinstance(response, dict):
             response = response.copy()
             response["_processed_at"] = time.time()
@@ -173,11 +174,11 @@ def add_response_timestamp_middleware() -> Callable[[Dict[str, Any]], Dict[str, 
     return middleware
 
 
-def add_response_size_middleware() -> Callable[[Dict[str, Any]], Dict[str, Any]]:
+def add_response_size_middleware() -> Callable[[dict[str, Any]], dict[str, Any]]:
     """Create middleware that adds response size information"""
     import json
 
-    def middleware(response: Dict[str, Any]) -> Dict[str, Any]:
+    def middleware(response: dict[str, Any]) -> dict[str, Any]:
         if isinstance(response, dict):
             response = response.copy()
             try:

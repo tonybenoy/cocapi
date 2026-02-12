@@ -3,7 +3,6 @@ Configuration management for cocapi
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -58,4 +57,4 @@ class RequestMetric:
     response_time: float
     timestamp: float
     cache_hit: bool
-    error_type: Optional[str] = None
+    error_type: str | None = None

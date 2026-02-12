@@ -3,7 +3,7 @@ Caching functionality for cocapi
 """
 
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .config import CacheEntry
 from .utils import get_cache_key
@@ -19,7 +19,7 @@ class CacheManager:
         Args:
             default_ttl: Default time-to-live in seconds (5 minutes)
         """
-        self.cache: Dict[str, CacheEntry] = {}
+        self.cache: dict[str, CacheEntry] = {}
         self.default_ttl = default_ttl
         self._enabled = True
         self._stats = {
@@ -42,8 +42,8 @@ class CacheManager:
         return self._enabled
 
     def get(
-        self, url: str, params: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, url: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
         """
         Get cached response if available and not expired
 
@@ -77,9 +77,9 @@ class CacheManager:
     def set(
         self,
         url: str,
-        params: Optional[Dict[str, Any]],
-        data: Dict[str, Any],
-        ttl: Optional[int] = None,
+        params: dict[str, Any] | None,
+        data: dict[str, Any],
+        ttl: int | None = None,
     ) -> None:
         """
         Cache response data
@@ -106,7 +106,7 @@ class CacheManager:
 
         self._stats["sets"] += 1
 
-    def invalidate(self, url: str, params: Optional[Dict[str, Any]] = None) -> bool:
+    def invalidate(self, url: str, params: dict[str, Any] | None = None) -> bool:
         """
         Invalidate specific cached entry
 
@@ -156,7 +156,7 @@ class CacheManager:
         self._stats["evictions"] += len(expired_keys)
         return len(expired_keys)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics"""
         total_requests = self._stats["hits"] + self._stats["misses"]
         hit_rate = (
@@ -179,7 +179,7 @@ class CacheManager:
             "stats": self._stats.copy(),
         }
 
-    def get_cache_info(self) -> Dict[str, Any]:
+    def get_cache_info(self) -> dict[str, Any]:
         """Get detailed cache information"""
         current_time = time.time()
         entries = []
@@ -213,8 +213,8 @@ class CacheManager:
         self.default_ttl = ttl
 
     def get_entry_info(
-        self, url: str, params: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, url: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
         """Get information about a specific cache entry"""
         cache_key = get_cache_key(url, params)
 
@@ -237,7 +237,7 @@ class CacheManager:
     def extend_ttl(
         self,
         url: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         additional_seconds: int = 300,
     ) -> bool:
         """
@@ -260,7 +260,7 @@ class CacheManager:
 
         return False
 
-    def touch(self, url: str, params: Optional[Dict[str, Any]] = None) -> bool:
+    def touch(self, url: str, params: dict[str, Any] | None = None) -> bool:
         """
         Reset timestamp for cache entry (extends its life without changing TTL)
 

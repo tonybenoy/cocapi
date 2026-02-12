@@ -4,7 +4,7 @@ Async functionality for cocapi
 
 import asyncio
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -77,9 +77,9 @@ class AsyncCocApiCore:
         self.middleware = MiddlewareManager()
 
         # Async-specific attributes
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
         self._should_close_client = False
-        self._rate_limiter: Optional[AsyncRateLimiter] = None
+        self._rate_limiter: AsyncRateLimiter | None = None
 
         if config.enable_rate_limiting:
             self._rate_limiter = AsyncRateLimiter(
@@ -111,9 +111,9 @@ class AsyncCocApiCore:
     async def make_request(
         self,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Make an async API request
 
@@ -286,7 +286,156 @@ class AsyncCocApiCore:
             "error_type": "retry_exhausted",
         }
 
-    def _handle_http_error(self, status: int, attempt: int) -> Dict[str, Any]:
+    async def make_post_request(
+        self,
+        endpoint: str,
+        json_body: dict[str, Any],
+        params: dict[str, Any] | None = None,
+        use_dynamic_model: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Make an async POST API request
+
+        Args:
+            endpoint: API endpoint path
+            json_body: JSON body to send with the POST request
+            params: Optional query parameters
+            use_dynamic_model: Whether to create dynamic Pydantic models
+
+        Returns:
+            API response as dictionary
+        """
+        start_time = time.time()
+
+        # Build URL
+        url = build_url(self.config.base_url, endpoint, params)
+
+        # Apply rate limiting
+        if self._rate_limiter:
+            await self._rate_limiter.acquire()
+
+        # Apply request middleware
+        headers = self.headers.copy()
+        url, headers, params = self.middleware.apply_request_middleware(
+            url, headers, params or {}
+        )
+
+        # Make the request with retries
+        for attempt in range(self.config.max_retries):
+            try:
+                if not self._client:
+                    raise RuntimeError(
+                        "AsyncCocApiCore not initialized. Use 'async with' context manager."
+                    )
+
+                response = await self._client.post(url, headers=headers, json=json_body)
+                response_time = time.time() - start_time
+
+                if is_successful_response(response.status_code):
+                    try:
+                        json_response = response.json()
+                    except Exception as e:
+                        error_response = self._handle_json_error(e, attempt)
+                        if self.config.enable_metrics:
+                            self.metrics.record_request(
+                                endpoint=endpoint,
+                                method="POST",
+                                status_code=response.status_code,
+                                response_time=response_time,
+                                cache_hit=False,
+                                error_type="json",
+                            )
+                        return error_response
+
+                    # Apply response middleware
+                    json_response = self.middleware.apply_response_middleware(
+                        json_response
+                    )
+
+                    # Record metrics
+                    if self.config.enable_metrics:
+                        self.metrics.record_request(
+                            endpoint=endpoint,
+                            method="POST",
+                            status_code=response.status_code,
+                            response_time=response_time,
+                            cache_hit=False,
+                        )
+
+                    # Apply dynamic model if requested
+                    if use_dynamic_model:
+                        json_response = create_dynamic_model(json_response, endpoint)
+
+                    return json_response
+
+                else:
+                    error_response = self._handle_http_error(
+                        response.status_code, attempt
+                    )
+
+                    if self.config.enable_metrics:
+                        self.metrics.record_request(
+                            endpoint=endpoint,
+                            method="POST",
+                            status_code=response.status_code,
+                            response_time=response_time,
+                            cache_hit=False,
+                            error_type="http",
+                        )
+
+                    if (
+                        not should_retry_error(response.status_code)
+                        or attempt >= self.config.max_retries - 1
+                    ):
+                        return error_response
+
+                    await asyncio.sleep(self.config.retry_delay * (2**attempt))
+
+            except httpx.TimeoutException as e:
+                error_response = self._handle_network_error(e, attempt)
+                response_time = time.time() - start_time
+
+                if self.config.enable_metrics:
+                    self.metrics.record_request(
+                        endpoint=endpoint,
+                        method="POST",
+                        status_code=0,
+                        response_time=response_time,
+                        cache_hit=False,
+                        error_type="timeout",
+                    )
+
+                if attempt >= self.config.max_retries - 1:
+                    return error_response
+
+                await asyncio.sleep(self.config.retry_delay * (2**attempt))
+
+            except Exception as e:
+                error_response = self._handle_network_error(e, attempt)
+                response_time = time.time() - start_time
+
+                if self.config.enable_metrics:
+                    self.metrics.record_request(
+                        endpoint=endpoint,
+                        method="POST",
+                        status_code=0,
+                        response_time=response_time,
+                        cache_hit=False,
+                        error_type="connection",
+                    )
+
+                if attempt >= self.config.max_retries - 1:
+                    return error_response
+
+                await asyncio.sleep(self.config.retry_delay * (2**attempt))
+
+        return {
+            "result": "error",
+            "message": "Max retries exceeded",
+            "error_type": "retry_exhausted",
+        }
+
+    def _handle_http_error(self, status: int, attempt: int) -> dict[str, Any]:
         """Handle HTTP error responses"""
         error_messages = {
             400: "Bad request - check your parameters",
@@ -314,7 +463,7 @@ class AsyncCocApiCore:
 
         return error_response
 
-    def _handle_network_error(self, error: Exception, attempt: int) -> Dict[str, Any]:
+    def _handle_network_error(self, error: Exception, attempt: int) -> dict[str, Any]:
         """Handle network-related errors"""
         error_type = (
             "timeout" if isinstance(error, httpx.TimeoutException) else "connection"
@@ -325,7 +474,7 @@ class AsyncCocApiCore:
             "connection": "Connection error - check your internet connection",
         }
 
-        error_response: Dict[str, Any] = {
+        error_response: dict[str, Any] = {
             "result": "error",
             "message": messages[error_type],
             "error_type": error_type,
@@ -337,7 +486,7 @@ class AsyncCocApiCore:
 
         return error_response
 
-    def _handle_json_error(self, error: Exception, attempt: int) -> Dict[str, Any]:
+    def _handle_json_error(self, error: Exception, attempt: int) -> dict[str, Any]:
         """Handle JSON parsing errors"""
         return {
             "result": "error",
@@ -345,7 +494,7 @@ class AsyncCocApiCore:
             "error_type": "json",
         }
 
-    async def test_connection(self) -> Dict[str, Any]:
+    async def test_connection(self) -> dict[str, Any]:
         """Test API connection"""
         try:
             response = await self.make_request("/locations")

@@ -4,7 +4,8 @@ Main CocApi client - simplified and modular version
 
 import logging
 import time
-from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, Union
+from collections.abc import Awaitable, Callable
+from typing import Any
 from warnings import warn
 
 import httpx
@@ -37,7 +38,7 @@ class CocApi(ApiMethods):
         token: str,
         timeout: int = 20,
         status_code: bool = False,
-        config: Optional[ApiConfig] = None,
+        config: ApiConfig | None = None,
         async_mode: bool = False,
     ):
         """
@@ -76,7 +77,7 @@ class CocApi(ApiMethods):
         self.middleware = MiddlewareManager()
 
         # Async core for async operations
-        self._async_core: Optional[AsyncCocApiCore] = None
+        self._async_core: AsyncCocApiCore | None = None
 
         self.DEFAULT_PARAMS = ("limit", "after", "before")
         self.ERROR_INVALID_PARAM = {
@@ -121,10 +122,17 @@ class CocApi(ApiMethods):
     def _api_response(
         self,
         uri: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
-    ) -> Union[Dict[str, Any], Awaitable[Dict[str, Any]]]:
+    ) -> dict[str, Any] | Awaitable[dict[str, Any]]:
         """Core API method that routes to sync or async implementation"""
+        # Auto-enable models when use_pydantic_models config is set
+        if self.config.use_pydantic_models and not use_dynamic_model:
+            from .models import validate_pydantic_available
+
+            if validate_pydantic_available():
+                use_dynamic_model = True
+
         if self.async_mode:
             if not self._async_core:
                 raise RuntimeError(
@@ -137,9 +145,9 @@ class CocApi(ApiMethods):
     def _sync_api_response(
         self,
         uri: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Synchronous API response handling"""
         start_time = time.time()
         cache_hit = False
@@ -305,14 +313,14 @@ class CocApi(ApiMethods):
         )
 
     def _add_status_code(
-        self, response: Dict[str, Any], status_code: int
-    ) -> Dict[str, Any]:
+        self, response: dict[str, Any], status_code: int
+    ) -> dict[str, Any]:
         """Add status code to response if requested (backward compatibility)"""
         if self.status_code:
             response["status_code"] = status_code
         return response
 
-    def _handle_http_error(self, status: int, attempt: int) -> Dict[str, Any]:
+    def _handle_http_error(self, status: int, attempt: int) -> dict[str, Any]:
         """Handle HTTP error responses"""
         error_messages = {
             400: "Bad request - check your parameters",
@@ -328,11 +336,12 @@ class CocApi(ApiMethods):
             "result": "error",
             "message": error_messages.get(status, f"HTTP error {status}"),
             "error_type": "http",
+            "http_status": status,
         }
 
         return error_response
 
-    def _handle_network_error(self, error: Exception, attempt: int) -> Dict[str, Any]:
+    def _handle_network_error(self, error: Exception, attempt: int) -> dict[str, Any]:
         """Handle network-related errors"""
         error_type = (
             "timeout" if isinstance(error, httpx.TimeoutException) else "connection"
@@ -343,7 +352,7 @@ class CocApi(ApiMethods):
             "connection": "Connection error - check your internet connection",
         }
 
-        error_response: Dict[str, Any] = {
+        error_response: dict[str, Any] = {
             "result": "error",
             "message": messages[error_type],
             "error_type": error_type,
@@ -351,7 +360,7 @@ class CocApi(ApiMethods):
 
         return error_response
 
-    def _handle_json_error(self, error: Exception, attempt: int) -> Dict[str, Any]:
+    def _handle_json_error(self, error: Exception, attempt: int) -> dict[str, Any]:
         """Handle JSON parsing errors"""
         return {
             "result": "error",
@@ -359,12 +368,12 @@ class CocApi(ApiMethods):
             "error_type": "json",
         }
 
-    def _validate_params(self, params: Optional[Dict[str, Any]]) -> bool:
+    def _validate_params(self, params: dict[str, Any] | None) -> bool:
         """Validate request parameters"""
         return validate_params(params, self.DEFAULT_PARAMS)
 
     # Test method
-    def test(self) -> Dict[str, Any]:
+    def test(self) -> dict[str, Any]:
         """Test API connection"""
         try:
             response = self._sync_api_response("/locations")
@@ -378,13 +387,244 @@ class CocApi(ApiMethods):
                 "error_type": "connection",
             }
 
+    # POST support for endpoints like verifytoken
+    def _api_post_response(
+        self,
+        uri: str,
+        json_body: dict[str, Any],
+        params: dict[str, Any] | None = None,
+        use_dynamic_model: bool = False,
+    ) -> dict[str, Any] | Awaitable[dict[str, Any]]:
+        """Core POST API method that routes to sync or async implementation"""
+        # Auto-enable models when use_pydantic_models config is set
+        if self.config.use_pydantic_models and not use_dynamic_model:
+            from .models import validate_pydantic_available
+
+            if validate_pydantic_available():
+                use_dynamic_model = True
+
+        if self.async_mode:
+            if not self._async_core:
+                raise RuntimeError(
+                    "Async mode enabled but not in async context. Use 'async with' statement."
+                )
+            return self._async_core.make_post_request(
+                uri, json_body, params, use_dynamic_model
+            )
+        else:
+            return self._sync_api_post_response(
+                uri, json_body, params, use_dynamic_model
+            )
+
+    def _sync_api_post_response(
+        self,
+        uri: str,
+        json_body: dict[str, Any],
+        params: dict[str, Any] | None = None,
+        use_dynamic_model: bool = False,
+    ) -> dict[str, Any]:
+        """Synchronous POST API response handling"""
+        start_time = time.time()
+
+        # Build URL
+        url = build_url(self.config.base_url, uri, params)
+
+        # Apply request middleware
+        headers = self.headers.copy()
+        url, headers, request_params = self.middleware.apply_request_middleware(
+            url, headers, params or {}
+        )
+
+        # Make the request with retries
+        for attempt in range(self.config.max_retries):
+            try:
+                response = httpx.post(
+                    url, headers=headers, json=json_body, timeout=self.config.timeout
+                )
+                response_time = time.time() - start_time
+
+                if is_successful_response(response.status_code):
+                    try:
+                        json_response = response.json()
+                    except Exception as e:
+                        error_response = self._handle_json_error(e, attempt)
+                        if self.config.enable_metrics:
+                            self.metrics.record_request(
+                                endpoint=uri,
+                                method="POST",
+                                status_code=response.status_code,
+                                response_time=response_time,
+                                cache_hit=False,
+                                error_type="json",
+                            )
+                        return self._add_status_code(
+                            error_response, response.status_code
+                        )
+
+                    # Apply response middleware
+                    json_response = self.middleware.apply_response_middleware(
+                        json_response
+                    )
+
+                    # Record metrics
+                    if self.config.enable_metrics:
+                        self.metrics.record_request(
+                            endpoint=uri,
+                            method="POST",
+                            status_code=response.status_code,
+                            response_time=response_time,
+                            cache_hit=False,
+                        )
+
+                    # Apply dynamic model if requested
+                    if use_dynamic_model:
+                        json_response = create_dynamic_model(json_response, uri)
+
+                    return self._add_status_code(json_response, response.status_code)
+
+                else:
+                    error_response = self._handle_http_error(
+                        response.status_code, attempt
+                    )
+
+                    if self.config.enable_metrics:
+                        self.metrics.record_request(
+                            endpoint=uri,
+                            method="POST",
+                            status_code=response.status_code,
+                            response_time=response_time,
+                            cache_hit=False,
+                            error_type="http",
+                        )
+
+                    if (
+                        not should_retry_error(response.status_code)
+                        or attempt >= self.config.max_retries - 1
+                    ):
+                        return self._add_status_code(
+                            error_response, response.status_code
+                        )
+
+                    time.sleep(self.config.retry_delay * (2**attempt))
+
+            except httpx.TimeoutException as e:
+                error_response = self._handle_network_error(e, attempt)
+                response_time = time.time() - start_time
+
+                if self.config.enable_metrics:
+                    self.metrics.record_request(
+                        endpoint=uri,
+                        method="POST",
+                        status_code=0,
+                        response_time=response_time,
+                        cache_hit=False,
+                        error_type="timeout",
+                    )
+
+                if attempt >= self.config.max_retries - 1:
+                    return self._add_status_code(error_response, 0)
+
+                time.sleep(self.config.retry_delay * (2**attempt))
+
+            except Exception as e:
+                error_response = self._handle_network_error(e, attempt)
+                response_time = time.time() - start_time
+
+                if self.config.enable_metrics:
+                    self.metrics.record_request(
+                        endpoint=uri,
+                        method="POST",
+                        status_code=0,
+                        response_time=response_time,
+                        cache_hit=False,
+                        error_type="connection",
+                    )
+
+                if attempt >= self.config.max_retries - 1:
+                    return self._add_status_code(error_response, 0)
+
+                time.sleep(self.config.retry_delay * (2**attempt))
+
+        return self._add_status_code(
+            {
+                "result": "error",
+                "message": "Max retries exceeded",
+                "error_type": "retry_exhausted",
+            },
+            0,
+        )
+
+    # Deprecated endpoint wrapper
+    def _deprecated_api_response(
+        self,
+        uri: str,
+        method_name: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | Awaitable[dict[str, Any]]:
+        """Try an API call; return deprecation notice on failure"""
+        if self.async_mode:
+            if not self._async_core:
+                raise RuntimeError(
+                    "Async mode enabled but not in async context. Use 'async with' statement."
+                )
+            return self._async_deprecated_response(uri, method_name, params)
+        return self._sync_deprecated_response(uri, method_name, params)
+
+    def _sync_deprecated_response(
+        self,
+        uri: str,
+        method_name: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Sync: try the API call, return deprecation notice only for 404/410"""
+        response = self._sync_api_response(uri, params)
+        if response.get("result") == "error":
+            http_status = response.get("http_status", 0)
+            if http_status in (404, 410):
+                return {
+                    "result": "error",
+                    "message": (
+                        f"This endpoint appears to be deprecated by SuperCell. "
+                        f"Method '{method_name}' may no longer be available."
+                    ),
+                    "error_type": "deprecated",
+                }
+            return response
+        return response
+
+    async def _async_deprecated_response(
+        self,
+        uri: str,
+        method_name: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Async: try the API call, return deprecation on failure"""
+        if not self._async_core:
+            raise RuntimeError(
+                "Async mode enabled but not in async context. Use 'async with' statement."
+            )
+        response = await self._async_core.make_request(uri, params)
+        if response.get("result") == "error":
+            http_status = response.get("http_status", 0)
+            if http_status in (404, 410):
+                return {
+                    "result": "error",
+                    "message": (
+                        f"This endpoint appears to be deprecated by SuperCell. "
+                        f"Method '{method_name}' may no longer be available."
+                    ),
+                    "error_type": "deprecated",
+                }
+            return response
+        return response
+
     # V3.0.0 Enhanced Features
     def custom_endpoint(
         self,
         endpoint_path: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
-    ) -> Union[Dict[str, Any], Awaitable[Dict[str, Any]]]:
+    ) -> dict[str, Any] | Awaitable[dict[str, Any]]:
         """
         Call a custom API endpoint (future-proofing for new SuperCell endpoints)
 
@@ -454,21 +694,21 @@ class CocApi(ApiMethods):
     def add_request_middleware(
         self,
         middleware: Callable[
-            [str, Dict[str, str], Dict[str, Any]],
-            Tuple[str, Dict[str, str], Dict[str, Any]],
+            [str, dict[str, str], dict[str, Any]],
+            tuple[str, dict[str, str], dict[str, Any]],
         ],
     ) -> None:
         """Add request middleware - delegates to middleware manager"""
         self.middleware.add_request_middleware(middleware)
 
     def add_response_middleware(
-        self, middleware: Callable[[Dict[str, Any]], Dict[str, Any]]
+        self, middleware: Callable[[dict[str, Any]], dict[str, Any]]
     ) -> None:
         """Add response middleware - delegates to middleware manager"""
         self.middleware.add_response_middleware(middleware)
 
     # Metrics methods
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get API metrics summary"""
         return self.metrics.get_metrics_summary()
 
@@ -481,7 +721,7 @@ class CocApi(ApiMethods):
         """Clear API response cache"""
         return self.cache.clear()
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics"""
         return self.cache.get_stats()
 
