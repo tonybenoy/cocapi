@@ -188,7 +188,9 @@ def _save_cached_keys(
             "ip": ip,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        cache_path.write_text(json.dumps(data, indent=2))  # NOSONAR — path from config, not user input
+        cache_path.write_text(
+            json.dumps(data, indent=2)
+        )  # NOSONAR — path from config, not user input
         # Restrict file permissions to owner-only (0600)
         if sys.platform != "win32":
             os.chmod(cache_path, 0o600)
@@ -206,7 +208,9 @@ def _invalidate_cached_keys(cache_path: Path, key_name: str) -> None:
         data = json.loads(cache_path.read_text())
         if key_name in data:
             del data[key_name]
-            cache_path.write_text(json.dumps(data, indent=2))  # NOSONAR — path from config, not user input
+            cache_path.write_text(
+                json.dumps(data, indent=2)
+            )  # NOSONAR — path from config, not user input
             if sys.platform != "win32":
                 os.chmod(cache_path, 0o600)
             logger.info("Invalidated cached keys for '%s'", key_name)
