@@ -5,6 +5,7 @@ All tests use mocked HTTP responses — no real API calls.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
@@ -587,6 +588,10 @@ class TestFromCredentials:
 
 
 class TestKeyPersistence:
+    @pytest.fixture(autouse=True)
+    def _allow_tmp(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("cocapi.key_manager._ALLOWED_KEY_STORAGE_PARENT", Path("/"))
+
     def test_save_and_load_round_trip(self, tmp_path) -> None:
         cache_file = tmp_path / "keys.json"
         _save_cached_keys(cache_file, "my_key", ["token-1", "token-2"], "1.2.3.4")

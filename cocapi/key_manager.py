@@ -142,6 +142,26 @@ def _filter_managed_keys(
 # ---------------------------------------------------------------------------
 
 _DEFAULT_KEY_STORAGE_PATH = Path.home() / ".cocapi" / "keys.json"
+_ALLOWED_KEY_STORAGE_PARENT = Path.home()
+
+
+def _safe_resolve(path: Path) -> Path:
+    """Resolve *path* to an absolute path, rejecting traversal components.
+
+    Also ensures the key storage path stays under the user's home directory
+    to prevent writing sensitive tokens to arbitrary locations.
+    """
+    resolved = path.resolve()
+    if ".." in resolved.parts:
+        raise ValueError(f"Path traversal detected: {path}")
+    try:
+        resolved.relative_to(_ALLOWED_KEY_STORAGE_PARENT)
+    except ValueError:
+        raise ValueError(
+            f"Key storage path must be under {_ALLOWED_KEY_STORAGE_PARENT}, "
+            f"got: {resolved}"
+        ) from None
+    return resolved
 
 
 def _load_cached_keys(cache_path: Path, key_name: str) -> tuple[list[str], str] | None:
@@ -151,6 +171,7 @@ def _load_cached_keys(cache_path: Path, key_name: str) -> tuple[list[str], str] 
     Returns (tokens, ip) if a valid cache entry exists, else None.
     """
     try:
+        cache_path = _safe_resolve(cache_path)
         if not cache_path.is_file():
             return None
         data = json.loads(cache_path.read_text())
@@ -171,8 +192,7 @@ def _save_cached_keys(
 ) -> None:
     """Save tokens to disk, merging with any existing entries."""
     try:
-        # Resolve to absolute and ensure it stays under the expected parent
-        cache_path = cache_path.resolve()
+        cache_path = _safe_resolve(cache_path)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Merge with existing data (other key_names)
@@ -188,9 +208,7 @@ def _save_cached_keys(
             "ip": ip,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        cache_path.write_text(
-            json.dumps(data, indent=2)
-        )  # NOSONAR — path from config, not user input
+        cache_path.write_text(json.dumps(data, indent=2))
         # Restrict file permissions to owner-only (0600)
         if sys.platform != "win32":
             os.chmod(cache_path, 0o600)
@@ -202,15 +220,13 @@ def _save_cached_keys(
 def _invalidate_cached_keys(cache_path: Path, key_name: str) -> None:
     """Remove a specific key_name entry from the cache file."""
     try:
-        cache_path = cache_path.resolve()
+        cache_path = _safe_resolve(cache_path)
         if not cache_path.is_file():
             return
         data = json.loads(cache_path.read_text())
         if key_name in data:
             del data[key_name]
-            cache_path.write_text(
-                json.dumps(data, indent=2)
-            )  # NOSONAR — path from config, not user input
+            cache_path.write_text(json.dumps(data, indent=2))
             if sys.platform != "win32":
                 os.chmod(cache_path, 0o600)
             logger.info("Invalidated cached keys for '%s'", key_name)

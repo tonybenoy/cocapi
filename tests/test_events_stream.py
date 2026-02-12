@@ -106,7 +106,7 @@ class TestEventStreamIteration:
             await asyncio.sleep(0.05)
             stream._running = False
 
-        asyncio.create_task(stop_soon())
+        task = asyncio.create_task(stop_soon())  # noqa: F841
 
         collected = []
         async for e in stream:

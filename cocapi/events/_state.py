@@ -14,6 +14,14 @@ from ._war_fsm import WarStateMachine
 logger = logging.getLogger(__name__)
 
 
+def _safe_resolve(path: Path) -> Path:
+    """Resolve *path* to an absolute path, rejecting traversal components."""
+    resolved = path.resolve()
+    if ".." in resolved.parts:
+        raise ValueError(f"Path traversal detected: {path}")
+    return resolved
+
+
 class PollingState:
     """In-memory state for polled resources with optional JSON persistence."""
 
@@ -76,6 +84,7 @@ class PollingState:
 
     def save(self, path: Path) -> None:
         """Persist state to JSON file for restart recovery."""
+        path = _safe_resolve(path)
         data = {
             "clans": self._clan_snapshots,
             "members": self._member_snapshots,
@@ -90,6 +99,7 @@ class PollingState:
 
     def load(self, path: Path) -> bool:
         """Load state from JSON file. Returns True if loaded successfully."""
+        path = _safe_resolve(path)
         if not path.exists():
             return False
         try:

@@ -64,7 +64,8 @@ class BaseWatcher:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                self._task = None
+                raise
             self._task = None
 
     async def _loop(self) -> None:
