@@ -18,7 +18,7 @@ Usage::
                 print(event.event_type, event.tag, event.changes)
 """
 
-from ._diff import diff_dicts, diff_member_tags
+from ._diff import diff_dicts, diff_member_tags, diff_named_list
 from ._state import PollingState
 from ._stream import EventStream
 from ._types import Change, Event, EventType, WarState
@@ -39,4 +39,5 @@ __all__ = [
     "WarStateMachine",
     "diff_dicts",
     "diff_member_tags",
+    "diff_named_list",
 ]

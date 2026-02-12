@@ -161,6 +161,56 @@ class TestClanWatcher:
         assert len(events) == 0
         assert state.get_members("#A") is None
 
+    @pytest.mark.asyncio
+    async def test_member_role_changed(self, api, state, queue):
+        old_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [{"tag": "#M1", "name": "Alice", "role": "member"}],
+        }
+        new_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [{"tag": "#M1", "name": "Alice", "role": "elder"}],
+        }
+        state.set_clan("#A", old_data)
+        state.set_members("#A", old_data["memberList"])
+        api.clan_tag = AsyncMock(return_value=new_data)
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        role_events = [e for e in events if e.event_type == EventType.MEMBER_ROLE_CHANGED]
+        assert len(role_events) == 1
+        assert role_events[0].metadata["old_role"] == "member"
+        assert role_events[0].metadata["new_role"] == "elder"
+        # Should also have MEMBER_UPDATED
+        assert any(e.event_type == EventType.MEMBER_UPDATED for e in events)
+
+    @pytest.mark.asyncio
+    async def test_member_donations_changed(self, api, state, queue):
+        old_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [{"tag": "#M1", "name": "Alice", "donations": 50}],
+        }
+        new_data = {
+            "tag": "#A",
+            "name": "Test",
+            "memberList": [{"tag": "#M1", "name": "Alice", "donations": 100}],
+        }
+        state.set_clan("#A", old_data)
+        state.set_members("#A", old_data["memberList"])
+        api.clan_tag = AsyncMock(return_value=new_data)
+
+        watcher = ClanWatcher(api, state, queue, ["#A"], interval=1.0)
+        events = await watcher._poll_once()
+
+        don_events = [e for e in events if e.event_type == EventType.MEMBER_DONATIONS]
+        assert len(don_events) == 1
+        assert don_events[0].metadata["donations"] == 100
+        assert any(e.event_type == EventType.MEMBER_UPDATED for e in events)
+
 
 # ---------------------------------------------------------------------------
 # WarWatcher
@@ -326,3 +376,211 @@ class TestPlayerWatcher:
 
         assert len(events) == 1
         assert events[0].event_type == EventType.POLL_ERROR
+
+    @pytest.mark.asyncio
+    async def test_troop_upgraded(self, api, state, queue):
+        old = {
+            "tag": "#P1",
+            "troops": [{"name": "Barbarian", "level": 10, "village": "home"}],
+        }
+        new = {
+            "tag": "#P1",
+            "troops": [{"name": "Barbarian", "level": 11, "village": "home"}],
+        }
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        troop_events = [e for e in events if e.event_type == EventType.TROOP_UPGRADED]
+        assert len(troop_events) == 1
+        assert troop_events[0].metadata["name"] == "Barbarian"
+        assert troop_events[0].metadata["old_level"] == 10
+        assert troop_events[0].metadata["new_level"] == 11
+
+    @pytest.mark.asyncio
+    async def test_spell_upgraded(self, api, state, queue):
+        old = {
+            "tag": "#P1",
+            "spells": [{"name": "Lightning Spell", "level": 9}],
+        }
+        new = {
+            "tag": "#P1",
+            "spells": [{"name": "Lightning Spell", "level": 10}],
+        }
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        spell_events = [e for e in events if e.event_type == EventType.SPELL_UPGRADED]
+        assert len(spell_events) == 1
+        assert spell_events[0].metadata["name"] == "Lightning Spell"
+
+    @pytest.mark.asyncio
+    async def test_hero_upgraded(self, api, state, queue):
+        old = {
+            "tag": "#P1",
+            "heroes": [{"name": "Barbarian King", "level": 80}],
+        }
+        new = {
+            "tag": "#P1",
+            "heroes": [{"name": "Barbarian King", "level": 81}],
+        }
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        hero_events = [e for e in events if e.event_type == EventType.HERO_UPGRADED]
+        assert len(hero_events) == 1
+        assert hero_events[0].metadata["name"] == "Barbarian King"
+        assert hero_events[0].metadata["old_level"] == 80
+        assert hero_events[0].metadata["new_level"] == 81
+
+    @pytest.mark.asyncio
+    async def test_hero_equipment_upgraded(self, api, state, queue):
+        old = {
+            "tag": "#P1",
+            "heroEquipment": [{"name": "Giant Gauntlet", "level": 15}],
+        }
+        new = {
+            "tag": "#P1",
+            "heroEquipment": [{"name": "Giant Gauntlet", "level": 16}],
+        }
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        equip_events = [
+            e for e in events if e.event_type == EventType.HERO_EQUIPMENT_UPGRADED
+        ]
+        assert len(equip_events) == 1
+        assert equip_events[0].metadata["name"] == "Giant Gauntlet"
+
+    @pytest.mark.asyncio
+    async def test_townhall_upgraded(self, api, state, queue):
+        old = {"tag": "#P1", "townHallLevel": 14, "name": "Alice"}
+        new = {"tag": "#P1", "townHallLevel": 15, "name": "Alice"}
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        th_events = [e for e in events if e.event_type == EventType.TOWNHALL_UPGRADED]
+        assert len(th_events) == 1
+        assert th_events[0].metadata["old_value"] == 14
+        assert th_events[0].metadata["new_value"] == 15
+        # Should also have PLAYER_UPDATED
+        assert any(e.event_type == EventType.PLAYER_UPDATED for e in events)
+
+    @pytest.mark.asyncio
+    async def test_player_name_changed(self, api, state, queue):
+        old = {"tag": "#P1", "name": "OldName"}
+        new = {"tag": "#P1", "name": "NewName"}
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        name_events = [e for e in events if e.event_type == EventType.PLAYER_NAME_CHANGED]
+        assert len(name_events) == 1
+        assert name_events[0].metadata["old_value"] == "OldName"
+        assert name_events[0].metadata["new_value"] == "NewName"
+
+    @pytest.mark.asyncio
+    async def test_league_changed(self, api, state, queue):
+        old = {"tag": "#P1", "league": {"id": 1, "name": "Silver I"}}
+        new = {"tag": "#P1", "league": {"id": 2, "name": "Gold III"}}
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        league_events = [
+            e for e in events if e.event_type == EventType.PLAYER_LEAGUE_CHANGED
+        ]
+        assert len(league_events) == 1
+
+    @pytest.mark.asyncio
+    async def test_label_changed(self, api, state, queue):
+        old = {"tag": "#P1", "labels": [{"id": 1, "name": "Farming"}]}
+        new = {"tag": "#P1", "labels": [{"id": 2, "name": "Clan Wars"}]}
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        label_events = [
+            e for e in events if e.event_type == EventType.PLAYER_LABEL_CHANGED
+        ]
+        assert len(label_events) == 1
+
+    @pytest.mark.asyncio
+    async def test_troop_excluded_by_filter(self, api, state, queue):
+        old = {
+            "tag": "#P1",
+            "troops": [{"name": "Barbarian", "level": 10}],
+            "trophies": 5000,
+        }
+        new = {
+            "tag": "#P1",
+            "troops": [{"name": "Barbarian", "level": 11}],
+            "trophies": 5100,
+        }
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(
+            api, state, queue, ["#P1"],
+            interval=1.0,
+            exclude_fields=frozenset({"troops"}),
+        )
+        events = await watcher._poll_once()
+
+        # Should NOT have troop events
+        troop_events = [e for e in events if e.event_type == EventType.TROOP_UPGRADED]
+        assert len(troop_events) == 0
+        # Should still have PLAYER_UPDATED for trophies
+        assert any(e.event_type == EventType.PLAYER_UPDATED for e in events)
+
+    @pytest.mark.asyncio
+    async def test_multiple_upgrades_same_poll(self, api, state, queue):
+        old = {
+            "tag": "#P1",
+            "troops": [
+                {"name": "Barbarian", "level": 10},
+                {"name": "Archer", "level": 9},
+            ],
+            "heroes": [{"name": "Barbarian King", "level": 80}],
+            "townHallLevel": 14,
+        }
+        new = {
+            "tag": "#P1",
+            "troops": [
+                {"name": "Barbarian", "level": 11},
+                {"name": "Archer", "level": 9},
+            ],
+            "heroes": [{"name": "Barbarian King", "level": 81}],
+            "townHallLevel": 15,
+        }
+        state.set_player("#P1", old)
+        api.players = AsyncMock(return_value=new)
+
+        watcher = PlayerWatcher(api, state, queue, ["#P1"], interval=1.0)
+        events = await watcher._poll_once()
+
+        types = [e.event_type for e in events]
+        assert EventType.TOWNHALL_UPGRADED in types
+        assert EventType.TROOP_UPGRADED in types
+        assert EventType.HERO_UPGRADED in types
+        assert EventType.PLAYER_UPDATED in types

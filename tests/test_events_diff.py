@@ -1,6 +1,6 @@
 """Tests for the event diff engine and types."""
 
-from cocapi.events._diff import diff_dicts, diff_member_tags
+from cocapi.events._diff import diff_dicts, diff_member_tags, diff_named_list
 from cocapi.events._types import Change, Event, EventType, WarState
 
 
@@ -157,6 +157,63 @@ class TestDiffMemberTags:
 
 
 # ---------------------------------------------------------------------------
+# diff_named_list
+# ---------------------------------------------------------------------------
+
+
+class TestDiffNamedList:
+    def test_no_changes(self):
+        items = [{"name": "Barbarian", "level": 10}]
+        assert diff_named_list(items, items.copy()) == []
+
+    def test_level_upgrade(self):
+        old = [{"name": "Barbarian", "level": 10}]
+        new = [{"name": "Barbarian", "level": 11}]
+        result = diff_named_list(old, new)
+        assert result == [("Barbarian", 10, 11)]
+
+    def test_multiple_upgrades(self):
+        old = [
+            {"name": "Barbarian", "level": 10},
+            {"name": "Archer", "level": 9},
+            {"name": "Giant", "level": 8},
+        ]
+        new = [
+            {"name": "Barbarian", "level": 10},
+            {"name": "Archer", "level": 10},
+            {"name": "Giant", "level": 9},
+        ]
+        result = diff_named_list(old, new)
+        assert len(result) == 2
+        names = {r[0] for r in result}
+        assert names == {"Archer", "Giant"}
+
+    def test_new_item_unlocked(self):
+        old = [{"name": "Barbarian", "level": 10}]
+        new = [
+            {"name": "Barbarian", "level": 10},
+            {"name": "Dragon", "level": 1},
+        ]
+        result = diff_named_list(old, new)
+        assert result == [("Dragon", None, 1)]
+
+    def test_item_removed(self):
+        old = [{"name": "Barbarian", "level": 10}, {"name": "Archer", "level": 9}]
+        new = [{"name": "Barbarian", "level": 10}]
+        # Removed items are not reported (not an "upgrade")
+        assert diff_named_list(old, new) == []
+
+    def test_empty_lists(self):
+        assert diff_named_list([], []) == []
+
+    def test_custom_key_and_compare_field(self):
+        old = [{"id": "A", "stars": 2}]
+        new = [{"id": "A", "stars": 3}]
+        result = diff_named_list(old, new, key="id", compare_field="stars")
+        assert result == [("A", 2, 3)]
+
+
+# ---------------------------------------------------------------------------
 # Event types
 # ---------------------------------------------------------------------------
 
@@ -166,6 +223,19 @@ class TestEventTypes:
         assert EventType.CLAN_UPDATED.value == "clan_updated"
         assert EventType.MEMBER_JOINED.value == "member_joined"
         assert EventType.POLL_ERROR.value == "poll_error"
+
+    def test_granular_event_type_values(self):
+        assert EventType.TROOP_UPGRADED.value == "troop_upgraded"
+        assert EventType.SPELL_UPGRADED.value == "spell_upgraded"
+        assert EventType.HERO_UPGRADED.value == "hero_upgraded"
+        assert EventType.HERO_EQUIPMENT_UPGRADED.value == "hero_equipment_upgraded"
+        assert EventType.TOWNHALL_UPGRADED.value == "townhall_upgraded"
+        assert EventType.BUILDERHALL_UPGRADED.value == "builderhall_upgraded"
+        assert EventType.PLAYER_NAME_CHANGED.value == "player_name_changed"
+        assert EventType.PLAYER_LEAGUE_CHANGED.value == "player_league_changed"
+        assert EventType.PLAYER_LABEL_CHANGED.value == "player_label_changed"
+        assert EventType.MEMBER_ROLE_CHANGED.value == "member_role_changed"
+        assert EventType.MEMBER_DONATIONS.value == "member_donations"
 
     def test_war_state_values(self):
         assert WarState.NOT_IN_WAR.value == "notInWar"

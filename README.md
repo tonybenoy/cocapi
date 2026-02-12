@@ -311,9 +311,20 @@ asyncio.run(main())
 | `MEMBER_JOINED` | New member detected in clan |
 | `MEMBER_LEFT` | Member no longer in clan |
 | `MEMBER_UPDATED` | Existing member's data changed (trophies, donations, etc.) |
+| `MEMBER_ROLE_CHANGED` | Member promoted or demoted (member → elder → co-leader) |
+| `MEMBER_DONATIONS` | Member donation count changed |
 | `WAR_STATE_CHANGED` | War state transition (notInWar → preparation → inWar → warEnded) |
 | `WAR_ATTACK_NEW` | New attack detected in an active or ended war |
-| `PLAYER_UPDATED` | Any tracked player field changed |
+| `PLAYER_UPDATED` | Any tracked player top-level field changed |
+| `TROOP_UPGRADED` | Individual troop level increased |
+| `SPELL_UPGRADED` | Individual spell level increased |
+| `HERO_UPGRADED` | Individual hero level increased |
+| `HERO_EQUIPMENT_UPGRADED` | Hero equipment level increased |
+| `TOWNHALL_UPGRADED` | Town Hall level increased |
+| `BUILDERHALL_UPGRADED` | Builder Hall level increased |
+| `PLAYER_NAME_CHANGED` | Player name changed |
+| `PLAYER_LEAGUE_CHANGED` | Player league changed |
+| `PLAYER_LABEL_CHANGED` | Player labels added or removed |
 | `POLL_ERROR` | API error during polling (watcher continues) |
 
 ### Callbacks

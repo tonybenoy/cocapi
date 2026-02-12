@@ -23,6 +23,7 @@ async def main() -> None:
         stream = EventStream(api)
         stream.watch_clans(["#2PP"], interval=60)
         stream.watch_wars(["#2PP"], interval=30)
+        stream.watch_players(["#900PUCPV"], interval=120)
 
         # --- Typed callbacks with decorators ---
 
@@ -36,6 +37,13 @@ async def main() -> None:
             name = event.metadata["member_name"]
             print(f"[LEAVE] {name} left {event.tag}")
 
+        @stream.on(EventType.MEMBER_ROLE_CHANGED)
+        async def on_role(event: Event) -> None:
+            name = event.metadata["member_name"]
+            old_r = event.metadata["old_role"]
+            new_r = event.metadata["new_role"]
+            print(f"[ROLE] {name}: {old_r} -> {new_r}")
+
         @stream.on(EventType.WAR_STATE_CHANGED)
         async def on_war(event: Event) -> None:
             fr = event.metadata["war_state_from"]
@@ -48,6 +56,20 @@ async def main() -> None:
             attacker = event.metadata["attacker_tag"]
             defender = event.metadata["defender_tag"]
             print(f"[ATTACK] {attacker} -> {defender}: {stars} stars")
+
+        @stream.on(EventType.TROOP_UPGRADED)
+        async def on_troop(event: Event) -> None:
+            name = event.metadata["name"]
+            print(f"[TROOP] {name}: lv{event.metadata['old_level']} -> lv{event.metadata['new_level']}")
+
+        @stream.on(EventType.HERO_UPGRADED)
+        async def on_hero(event: Event) -> None:
+            name = event.metadata["name"]
+            print(f"[HERO] {name}: lv{event.metadata['old_level']} -> lv{event.metadata['new_level']}")
+
+        @stream.on(EventType.TOWNHALL_UPGRADED)
+        async def on_th(event: Event) -> None:
+            print(f"[TH] {event.tag}: TH{event.metadata['old_value']} -> TH{event.metadata['new_value']}")
 
         # --- Wildcard: fires on every event ---
 
