@@ -314,18 +314,65 @@ cocapi clan "#2PP" --email you@example.com --password yourpass
 
 ### Commands
 
+Add `--json` to any command for raw JSON output. Add `--limit N` where supported.
+
+**Clans**
+
 ```bash
-cocapi clan "#2PP"
-cocapi player "#900PUCPV"
-cocapi members "#2PP" --limit 10
-cocapi war "#2PP"
-cocapi search "clash" --limit 5
-cocapi leagues
-cocapi goldpass
-cocapi locations
+cocapi clan "#2PP"                           # Clan info
+cocapi members "#2PP" --limit 10             # Clan members
+cocapi war "#2PP"                            # Current war
+cocapi warlog "#2PP"                         # War log
+cocapi cwl "#2PP"                            # CWL league group
+cocapi raids "#2PP"                          # Capital raid seasons
+cocapi search "clash" --limit 5              # Search clans by name
+cocapi search "war" --min-level 10 --war-frequency always  # Advanced search
 ```
 
-Add `--json` for raw JSON output.
+**Players**
+
+```bash
+cocapi player "#900PUCPV"                    # Player info
+cocapi verify-token "#900PUCPV" "abc123"     # Verify in-game token
+```
+
+**Locations & Rankings**
+
+```bash
+cocapi locations                             # List all locations
+cocapi location 32000006                     # Specific location info
+cocapi rankings 32000087 clans               # Clan rankings for location
+cocapi rankings 32000087 players             # Player rankings
+cocapi rankings 32000087 clans-builder-base  # Builder base clan rankings
+cocapi rankings 32000087 players-builder-base
+cocapi rankings 32000087 capitals            # Capital rankings
+```
+
+**Leagues**
+
+```bash
+cocapi leagues                               # List leagues
+cocapi league 29000022                       # Specific league info
+cocapi league-seasons 29000022               # List seasons (Legend League)
+cocapi league-seasons 29000022 2025-01       # Season rankings
+cocapi war-leagues                           # List war leagues
+cocapi war-leagues 48000000                  # Specific war league
+cocapi capital-leagues                       # List capital leagues
+cocapi capital-leagues 85000000              # Specific capital league
+cocapi builder-base-leagues                  # List builder base leagues
+cocapi builder-base-leagues 44000000         # Specific builder base league
+cocapi league-tiers                          # List league tiers
+cocapi league-tiers 105000001               # Specific league tier
+```
+
+**Other**
+
+```bash
+cocapi goldpass                              # Current gold pass season
+cocapi labels clans                          # Clan labels
+cocapi labels players                        # Player labels
+cocapi cwl-war "#WARTAG"                     # Specific CWL war
+```
 
 ## API Reference
 
