@@ -16,7 +16,7 @@
 
 A high-performance Python wrapper for SuperCell's Clash of Clans API with enterprise-grade features including async support, response caching, retry logic, middleware system, and comprehensive metrics.
 
-**🎯 Complete API Coverage**: All 22 official endpoints implemented  
+**🎯 Complete API Coverage**: All official API endpoints implemented
 **⚡ High Performance**: Async support with intelligent caching and rate limiting  
 **🔄 100% Backward Compatible**: Drop-in replacement for existing code  
 **🛡️ Production Ready**: Retry logic, middleware pipeline, metrics tracking, and comprehensive error handling  
@@ -220,12 +220,12 @@ api = CocApi('YOUR_API_TOKEN', config=config)
 # Get structured clan data
 clan = api.clan_tag('#2PP')  # Returns Clan model instead of dict
 print(clan.name)             # Type-safe attribute access
-print(clan.clan_level)       # IDE autocompletion support
+print(clan.clanLevel)        # IDE autocompletion support
 print(clan.members)          # Validated data structure
 
-# Get structured player data  
+# Get structured player data
 player = api.players('#PLAYER_TAG')  # Returns Player model
-print(player.town_hall_level)        # Type-safe attributes
+print(player.townHallLevel)         # Type-safe attributes
 print(player.trophies)
 print(player.clan.name if player.clan else "No clan")
 
@@ -369,66 +369,97 @@ All methods work identically in both sync and async modes - just use `await` whe
 
 ### Information about a Clan
 ```python
-api.clan_tag(tag) #example tag "#9UOVJJ9J"
+api.clan_tag(tag) #example tag "#2PP"
 ```
 <details>
  <summary>Click to view output</summary>
 
 ```text
 {
-  "warLeague": {
-    "name": {},
-    "id": 0
-  },
-  "memberList": [
-    {
-      "league": {
-        "name": {},
-        "id": 0,
-        "iconUrls": {}
-      },
-      "tag": "string",
-      "name": "string",
-      "role": "string",
-      "expLevel": 0,
-      "clanRank": 0,
-      "previousClanRank": 0,
-      "donations": 0,
-      "donationsReceived": 0,
-      "trophies": 0,
-      "versusTrophies": 0
-    }
-  ],
-  "isWarLogPublic": true,
   "tag": "string",
-  "warFrequency": "string",
-  "clanLevel": 0,
-  "warWinStreak": 0,
-  "warWins": 0,
-  "warTies": 0,
-  "warLosses": 0,
-  "clanPoints": 0,
-  "clanVersusPoints": 0,
-  "requiredTrophies": 0,
   "name": "string",
+  "type": "string",
+  "description": "string",
   "location": {
-    "localizedName": "string",
     "id": 0,
     "name": "string",
     "isCountry": true,
     "countryCode": "string"
   },
-  "type": "string",
+  "isFamilyFriendly": true,
+  "badgeUrls": {
+    "small": "string",
+    "large": "string",
+    "medium": "string"
+  },
+  "clanLevel": 0,
+  "clanPoints": 0,
+  "clanBuilderBasePoints": 0,
+  "clanCapitalPoints": 0,
+  "capitalLeague": {
+    "id": 0,
+    "name": "string"
+  },
+  "requiredTrophies": 0,
+  "requiredBuilderBaseTrophies": 0,
+  "requiredTownhallLevel": 0,
+  "warFrequency": "string",
+  "warWinStreak": 0,
+  "warWins": 0,
+  "isWarLogPublic": true,
+  "warLeague": {
+    "id": 0,
+    "name": "string"
+  },
   "members": 0,
+  "memberList": [
+    {
+      "tag": "string",
+      "name": "string",
+      "role": "string",
+      "townHallLevel": 0,
+      "expLevel": 0,
+      "league": {
+        "id": 0,
+        "name": "string",
+        "iconUrls": {}
+      },
+      "leagueTier": {
+        "id": 0,
+        "name": "string",
+        "iconUrls": {}
+      },
+      "trophies": 0,
+      "builderBaseTrophies": 0,
+      "clanRank": 0,
+      "previousClanRank": 0,
+      "donations": 0,
+      "donationsReceived": 0,
+      "playerHouse": {
+        "elements": []
+      },
+      "builderBaseLeague": {
+        "id": 0,
+        "name": "string"
+      }
+    }
+  ],
   "labels": [
     {
-      "name": {},
       "id": 0,
+      "name": "string",
       "iconUrls": {}
     }
   ],
-  "description": "string",
-  "badgeUrls": {}
+  "clanCapital": {
+    "capitalHallLevel": 0,
+    "districts": []
+  },
+  "chatLanguage": {
+    "id": 0,
+    "name": "string",
+    "languageCode": "string"
+  }
 }
 ```
 </details>
@@ -437,7 +468,30 @@ api.clan_tag(tag) #example tag "#9UOVJJ9J"
 ```python
 api.clan_members(tag)
 ```
-returns membersList information from api.clan_tag(tag) under "items" in dict
+Returns clan member list under "items" in dict
+
+### Search Clans
+```python
+# Basic search by name
+api.clan(name="MyClans", limit=10)
+
+# Advanced search with filters
+api.clan(
+    name="War",
+    limit=20,
+    war_frequency="always",
+    location_id=32000006,
+    min_members=30,
+    max_members=50,
+    min_clan_points=20000,
+    min_clan_level=10,
+    label_ids="56000000,56000001"
+)
+
+# With pagination
+api.clan(name="MyClans", params={"after": "cursor_token"})
+```
+Search all clans by name and/or filtering criteria. Name must be at least 3 characters long if used.
 
 ### War Log Information
 ```python
@@ -447,85 +501,35 @@ api.clan_war_log(tag)
  <summary>Click to view output</summary>
 
 ```text
-{items:
+{"items":
 [
   {
-    "clan": {
-      "destructionPercentage": {},
-      "tag": "string",
-      "name": "string",
-      "badgeUrls": {},
-      "clanLevel": 0,
-      "attacks": 0,
-      "stars": 0,
-      "expEarned": 0,
-      "members": [
-        {
-          "tag": "string",
-          "name": "string",
-          "mapPosition": 0,
-          "townhallLevel": 0,
-          "opponentAttacks": 0,
-          "bestOpponentAttack": {
-            "order": 0,
-            "attackerTag": "string",
-            "defenderTag": "string",
-            "stars": 0,
-            "destructionPercentage": 0
-          },
-          "attacks": [
-            {
-              "order": 0,
-              "attackerTag": "string",
-              "defenderTag": "string",
-              "stars": 0,
-              "destructionPercentage": 0
-            }
-          ]
-        }
-      ]
-    },
-    "teamSize": 0,
-    "opponent": {
-      "destructionPercentage": {},
-      "tag": "string",
-      "name": "string",
-      "badgeUrls": {},
-      "clanLevel": 0,
-      "attacks": 0,
-      "stars": 0,
-      "expEarned": 0,
-      "members": [
-        {
-          "tag": "string",
-          "name": "string",
-          "mapPosition": 0,
-          "townhallLevel": 0,
-          "opponentAttacks": 0,
-          "bestOpponentAttack": {
-            "order": 0,
-            "attackerTag": "string",
-            "defenderTag": "string",
-            "stars": 0,
-            "destructionPercentage": 0
-          },
-          "attacks": [
-            {
-              "order": 0,
-              "attackerTag": "string",
-              "defenderTag": "string",
-              "stars": 0,
-              "destructionPercentage": 0
-            }
-          ]
-        }
-      ]
-    },
+    "result": "string",
     "endTime": "string",
-    "result": "string"
+    "teamSize": 0,
+    "attacksPerMember": 0,
+    "battleModifier": "string",
+    "clan": {
+      "tag": "string",
+      "name": "string",
+      "badgeUrls": {},
+      "clanLevel": 0,
+      "attacks": 0,
+      "stars": 0,
+      "destructionPercentage": 0.0,
+      "expEarned": 0
+    },
+    "opponent": {
+      "tag": "string",
+      "name": "string",
+      "badgeUrls": {},
+      "clanLevel": 0,
+      "stars": 0,
+      "destructionPercentage": 0.0
+    }
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -539,81 +543,57 @@ api.clan_current_war(tag)
 
 ```text
 {
-  "clan": {
-    "destructionPercentage": {},
-    "tag": "string",
-    "name": "string",
-    "badgeUrls": {},
-    "clanLevel": 0,
-    "attacks": 0,
-    "stars": 0,
-    "expEarned": 0,
-    "members": [
-      {
-        "tag": "string",
-        "name": "string",
-        "mapPosition": 0,
-        "townhallLevel": 0,
-        "opponentAttacks": 0,
-        "bestOpponentAttack": {
-          "order": 0,
-          "attackerTag": "string",
-          "defenderTag": "string",
-          "stars": 0,
-          "destructionPercentage": 0
-        },
-        "attacks": [
-          {
-            "order": 0,
-            "attackerTag": "string",
-            "defenderTag": "string",
-            "stars": 0,
-            "destructionPercentage": 0
-          }
-        ]
-      }
-    ]
-  },
-  "teamSize": 0,
-  "opponent": {
-    "destructionPercentage": {},
-    "tag": "string",
-    "name": "string",
-    "badgeUrls": {},
-    "clanLevel": 0,
-    "attacks": 0,
-    "stars": 0,
-    "expEarned": 0,
-    "members": [
-      {
-        "tag": "string",
-        "name": "string",
-        "mapPosition": 0,
-        "townhallLevel": 0,
-        "opponentAttacks": 0,
-        "bestOpponentAttack": {
-          "order": 0,
-          "attackerTag": "string",
-          "defenderTag": "string",
-          "stars": 0,
-          "destructionPercentage": 0
-        },
-        "attacks": [
-          {
-            "order": 0,
-            "attackerTag": "string",
-            "defenderTag": "string",
-            "stars": 0,
-            "destructionPercentage": 0
-          }
-        ]
-      }
-    ]
-  },
-  "startTime": "string",
   "state": "string",
+  "teamSize": 0,
+  "attacksPerMember": 0,
+  "battleModifier": "string",
+  "preparationStartTime": "string",
+  "startTime": "string",
   "endTime": "string",
-  "preparationStartTime": "string"
+  "clan": {
+    "tag": "string",
+    "name": "string",
+    "badgeUrls": {},
+    "clanLevel": 0,
+    "attacks": 0,
+    "stars": 0,
+    "destructionPercentage": 0.0,
+    "members": [
+      {
+        "tag": "string",
+        "name": "string",
+        "townhallLevel": 0,
+        "mapPosition": 0,
+        "opponentAttacks": 0,
+        "bestOpponentAttack": {
+          "order": 0,
+          "attackerTag": "string",
+          "defenderTag": "string",
+          "stars": 0,
+          "destructionPercentage": 0
+        },
+        "attacks": [
+          {
+            "order": 0,
+            "attackerTag": "string",
+            "defenderTag": "string",
+            "stars": 0,
+            "destructionPercentage": 0
+          }
+        ]
+      }
+    ]
+  },
+  "opponent": {
+    "tag": "string",
+    "name": "string",
+    "badgeUrls": {},
+    "clanLevel": 0,
+    "attacks": 0,
+    "stars": 0,
+    "destructionPercentage": 0.0,
+    "members": []
+  }
 }
 ```
 </details>
@@ -669,7 +649,7 @@ Retrieve clan's capital raid seasons information
 [
   {
     "state": "string",
-    "startTime": "string", 
+    "startTime": "string",
     "endTime": "string",
     "capitalTotalLoot": 0,
     "raidsCompleted": 0,
@@ -677,19 +657,12 @@ Retrieve clan's capital raid seasons information
     "enemyDistrictsDestroyed": 0,
     "offensiveReward": 0,
     "defensiveReward": 0,
-    "members": [
-      {
-        "tag": "string",
-        "name": "string",
-        "attacks": 0,
-        "attackLimit": 0,
-        "bonusAttackLimit": 0,
-        "capitalResourcesLooted": 0
-      }
-    ]
+    "members": [],
+    "attackLog": [],
+    "defenseLog": []
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -746,110 +719,104 @@ api.players(player_tag) #for example "#900PUCPV"
 
 ```text
 {
+  "tag": "string",
+  "name": "string",
+  "townHallLevel": 0,
+  "expLevel": 0,
+  "trophies": 0,
+  "bestTrophies": 0,
+  "warStars": 0,
+  "attackWins": 0,
+  "defenseWins": 0,
+  "builderHallLevel": 0,
+  "builderBaseTrophies": 0,
+  "bestBuilderBaseTrophies": 0,
+  "role": "string",
+  "warPreference": "string",
+  "donations": 0,
+  "donationsReceived": 0,
+  "clanCapitalContributions": 0,
   "clan": {
     "tag": "string",
-    "clanLevel": 0,
     "name": "string",
+    "clanLevel": 0,
     "badgeUrls": {}
   },
-  "league": {
-    "name": {},
+  "leagueTier": {
     "id": 0,
+    "name": "string",
     "iconUrls": {}
   },
-  "townHallWeaponLevel": 0,
-  "versusBattleWins": 0,
-  "legendStatistics": {
-    "previousSeason": {
-      "trophies": 0,
-      "id": "string",
-      "rank": 0
-    },
-    "previousVersusSeason": {
-      "trophies": 0,
-      "id": "string",
-      "rank": 0
-    },
-    "bestVersusSeason": {
-      "trophies": 0,
-      "id": "string",
-      "rank": 0
-    },
-    "legendTrophies": 0,
-    "currentSeason": {
-      "trophies": 0,
-      "id": "string",
-      "rank": 0
-    },
-    "bestSeason": {
-      "trophies": 0,
-      "id": "string",
-      "rank": 0
-    }
+  "builderBaseLeague": {
+    "id": 0,
+    "name": "string"
   },
+  "achievements": [
+    {
+      "name": "string",
+      "stars": 0,
+      "value": 0,
+      "target": 0,
+      "info": "string",
+      "completionInfo": "string",
+      "village": "string"
+    }
+  ],
+  "labels": [
+    {
+      "id": 0,
+      "name": "string",
+      "iconUrls": {}
+    }
+  ],
   "troops": [
     {
+      "name": "string",
       "level": 0,
-      "name": {},
       "maxLevel": 0,
       "village": "string"
     }
   ],
   "heroes": [
     {
+      "name": "string",
       "level": 0,
-      "name": {},
       "maxLevel": 0,
       "village": "string"
     }
   ],
+  "heroEquipment": [],
   "spells": [
     {
+      "name": "string",
       "level": 0,
-      "name": {},
       "maxLevel": 0,
       "village": "string"
     }
-  ],
-  "role": "string",
-  "attackWins": 0,
-  "defenseWins": 0,
-  "townHallLevel": 0,
-  "labels": [
-    {
-      "name": {},
-      "id": 0,
-      "iconUrls": {}
-    }
-  ],
-  "tag": "string",
-  "name": "string",
-  "expLevel": 0,
-  "trophies": 0,
-  "bestTrophies": 0,
-  "donations": 0,
-  "donationsReceived": 0,
-  "builderHallLevel": 0,
-  "versusTrophies": 0,
-  "bestVersusTrophies": 0,
-  "warStars": 0,
-  "achievements": [
-    {
-      "stars": 0,
-      "value": 0,
-      "name": {},
-      "target": 0,
-      "info": {},
-      "completionInfo": {},
-      "village": "string"
-    }
-  ],
-  "versusBattleWinCount": 0
+  ]
 }
 ```
 </details>
 
 
+
+
+### Verify Player Token
+```python
+api.verify_player_token(player_tag, "player_api_token")
+```
+Verify the API token found in the player's game settings to confirm account ownership.
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{
+  "tag": "string",
+  "token": "string",
+  "status": "string"
+}
+```
+</details>
 
 
 ## Locations
@@ -865,30 +832,39 @@ api.location()
 {"items":
 [
   {
-    "localizedName": "string",
     "id": 0,
     "name": "string",
     "isCountry": true,
     "countryCode": "string"
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
 
 ### Information for a Single Location
 ```python
-api.location_id(location_tag) #for example "32000047"
+api.location_id(location_id) #for example "32000249"
 ```
+<details>
+ <summary>Click to view output</summary>
 
-returns the above information for a single location
+```text
+{
+  "id": 0,
+  "name": "string",
+  "isCountry": true,
+  "countryCode": "string"
+}
+```
+</details>
 
 ### Top Clans in a Location
 ```python
-api.location_id_clan_rank(location_tag)
+api.location_id_clan_rank(location_id)
 ```
-Top 200 clans in a given location
+Top clans in a given location
 <details>
  <summary>Click to view output</summary>
 
@@ -896,33 +872,32 @@ Top 200 clans in a given location
 {"items":
 [
   {
-    "clanLevel": 0,
-    "clanPoints": 0,
+    "tag": "string",
+    "name": "string",
     "location": {
-      "localizedName": "string",
       "id": 0,
       "name": "string",
       "isCountry": true,
       "countryCode": "string"
     },
+    "badgeUrls": {},
+    "clanLevel": 0,
     "members": 0,
-    "tag": "string",
-    "name": "string",
+    "clanPoints": 0,
     "rank": 0,
-    "previousRank": 0,
-    "badgeUrls": {}
+    "previousRank": 0
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
 
 ### Top Players in a Location
 ```python
-api.clan_leaguegroup(location_tag)
+api.location_id_player_rank(location_id)
 ```
-Top 200 players in a given location
+Top players in a given location
 <details>
  <summary>Click to view output</summary>
 
@@ -930,91 +905,155 @@ Top 200 players in a given location
 {"items":
 [
   {
+    "tag": "string",
+    "name": "string",
+    "expLevel": 0,
+    "trophies": 0,
+    "attackWins": 0,
+    "defenseWins": 0,
+    "rank": 0,
+    "previousRank": 0,
     "clan": {
       "tag": "string",
       "name": "string",
       "badgeUrls": {}
     },
     "league": {
-      "name": {},
       "id": 0,
+      "name": "string",
       "iconUrls": {}
     },
-    "attackWins": 0,
-    "defenseWins": 0,
+    "leagueTier": {
+      "id": 0,
+      "name": "string",
+      "iconUrls": {}
+    }
+  }
+],
+"paging": {"cursors": {}}
+}
+```
+</details>
+
+
+### Top Builder Base Clans in a Location
+```python
+api.location_clans_builder_base(location_id)
+```
+Top builder base clans in a given location
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{"items":
+[
+  {
+    "tag": "string",
+    "name": "string",
+    "location": {
+      "id": 0,
+      "name": "string",
+      "isCountry": true,
+      "countryCode": "string"
+    },
+    "badgeUrls": {},
+    "clanLevel": 0,
+    "members": 0,
+    "rank": 0,
+    "previousRank": 0,
+    "clanBuilderBasePoints": 0
+  }
+],
+"paging": {"cursors": {}}
+}
+```
+</details>
+
+### Top Builder Base Players in a Location
+```python
+api.location_players_builder_base(location_id)
+```
+Top builder base players in a given location
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{"items":
+[
+  {
     "tag": "string",
     "name": "string",
     "expLevel": 0,
     "rank": 0,
     "previousRank": 0,
-    "trophies": 0
-  }
-],
-"paging": {'cursors': {}}
-}
-```
-</details>
-
-
-### Top Versus Clans in a Location
-```python
-api.location_clan_versus(location_tag)
-```
-Top 200 versus clans in a given location
-<details>
- <summary>Click to view output</summary>
-
-```text
-{"items":
-[
-  {
-    "clanPoints": 0,
-    "clanVersusPoints": 0
-  }
-],
-"paging": {'cursors': {}}
-}
-```
-</details>
-
-
-### Top Versus Players in a Location
-```python
-api.location_player_versus(location_tag)
-```
-Top 200 versus players in a given location
-<details>
- <summary>Click to view output</summary>
-
-```text
-{"items":
-[
-  {
+    "builderBaseTrophies": 0,
     "clan": {
       "tag": "string",
       "name": "string",
       "badgeUrls": {}
     },
-    "versusBattleWins": 0,
-    "tag": "string",
-    "name": "string",
-    "expLevel": 0,
-    "rank": 0,
-    "previousRank": 0,
-    "versusTrophies": 0
+    "builderBaseLeague": {
+      "id": 0,
+      "name": "string"
+    }
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
+
+### Capital Rankings in a Location
+```python
+api.location_capital_rankings(location_id)
+```
+Top capital rankings in a given location
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{"items":
+[
+  {
+    "tag": "string",
+    "name": "string",
+    "location": {
+      "id": 0,
+      "name": "string",
+      "isCountry": true,
+      "countryCode": "string"
+    },
+    "badgeUrls": {},
+    "clanLevel": 0,
+    "members": 0,
+    "rank": 0,
+    "previousRank": 0,
+    "clanCapitalPoints": 0
+  }
+],
+"paging": {"cursors": {}}
+}
+```
+</details>
+
+### Top Versus Clans in a Location (Deprecated)
+```python
+api.location_clan_versus(location_tag)
+```
+> **Deprecated**: This endpoint may no longer be available. If the API call fails, a deprecation notice is returned with `error_type: "deprecated"`.
+
+### Top Versus Players in a Location (Deprecated)
+```python
+api.location_player_versus(location_tag)
+```
+> **Deprecated**: This endpoint may no longer be available. If the API call fails, a deprecation notice is returned with `error_type: "deprecated"`.
 
 
 
 
 ## Leagues
 
-### List leagues
+### List Leagues
 ```python
 api.league()
 ```
@@ -1025,12 +1064,12 @@ api.league()
 {"items":
 [
   {
-    "name": {},
     "id": 0,
+    "name": "string",
     "iconUrls": {}
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -1038,16 +1077,20 @@ api.league()
 
 ### League Information
 ```python
-api.league_id(league_tag)
+api.league_id(league_id)
 ```
 <details>
  <summary>Click to view output</summary>
 
 ```text
 {
-  "name": {},
   "id": 0,
-  "iconUrls": {}
+  "name": "string",
+  "iconUrls": {
+    "small": "string",
+    "tiny": "string",
+    "medium": "string"
+  }
 }
 ```
 </details>
@@ -1055,7 +1098,7 @@ api.league_id(league_tag)
 
 ### List Season Leagues
 ```python
-api.league_season(league_tag)
+api.league_season(league_id)
 ```
 Information is available only for Legend League
 <details>
@@ -1068,7 +1111,7 @@ Information is available only for Legend League
     "id": "string"
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -1076,9 +1119,9 @@ Information is available only for Legend League
 
 ### League Season Ranking
 ```python
-api.league_season_id(league_tag, season_tag)
+api.league_season_id(league_id, season_id)
 ```
-Information is available only for Legend League
+Information is available only for Legend League. Note: `limit` must be between 100 and 25,000.
 <details>
  <summary>Click to view output</summary>
 
@@ -1086,27 +1129,26 @@ Information is available only for Legend League
 {"items":
 [
   {
+    "tag": "string",
+    "name": "string",
+    "expLevel": 0,
+    "trophies": 0,
+    "attackWins": 0,
+    "defenseWins": 0,
+    "rank": 0,
     "clan": {
       "tag": "string",
       "name": "string",
       "badgeUrls": {}
     },
-    "league": {
-      "name": {},
+    "leagueTier": {
       "id": 0,
+      "name": "string",
       "iconUrls": {}
-    },
-    "attackWins": 0,
-    "defenseWins": 0,
-    "tag": "string",
-    "name": "string",
-    "expLevel": 0,
-    "rank": 0,
-    "previousRank": 0,
-    "trophies": 0
+    }
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -1122,12 +1164,11 @@ api.capitalleagues()
 {"items":
 [
   {
-    "name": {},
     "id": 0,
-    "iconUrls": {}
+    "name": "string"
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -1141,9 +1182,8 @@ api.capitalleagues_id(league_id)
 
 ```text
 {
-  "name": {},
   "id": 0,
-  "iconUrls": {}
+  "name": "string"
 }
 ```
 </details>
@@ -1159,12 +1199,11 @@ api.builderbaseleagues()
 {"items":
 [
   {
-    "name": {},
     "id": 0,
-    "iconUrls": {}
+    "name": "string"
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -1178,9 +1217,51 @@ api.builderbaseleagues_id(league_id)
 
 ```text
 {
-  "name": {},
   "id": 0,
-  "iconUrls": {}
+  "name": "string"
+}
+```
+</details>
+
+### List League Tiers
+```python
+api.leaguetiers()
+```
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{"items":
+[
+  {
+    "id": 0,
+    "name": "string",
+    "iconUrls": {
+      "small": "string",
+      "large": "string"
+    }
+  }
+],
+"paging": {"cursors": {}}
+}
+```
+</details>
+
+### League Tier Information
+```python
+api.leaguetiers_id(league_tier_id)
+```
+<details>
+ <summary>Click to view output</summary>
+
+```text
+{
+  "id": 0,
+  "name": "string",
+  "iconUrls": {
+    "small": "string",
+    "large": "string"
+  }
 }
 ```
 </details>
@@ -1196,12 +1277,11 @@ api.warleagues()
 {"items":
 [
   {
-    "name": {},
     "id": 0,
-    "iconUrls": {}
+    "name": "string"
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -1215,9 +1295,8 @@ api.warleagues_id(league_id)
 
 ```text
 {
-  "name": {},
   "id": 0,
-  "iconUrls": {}
+  "name": "string"
 }
 ```
 </details>
@@ -1229,7 +1308,7 @@ api.warleagues_id(league_id)
 
 ### Current Gold Pass Season
 ```python
-api.goldpass_seasons_current()
+api.goldpass()
 ```
 Get information about the current gold pass season
 <details>
@@ -1257,12 +1336,12 @@ api.labels_clans()
 {"items":
 [
   {
-    "name": {},
     "id": 0,
+    "name": "string",
     "iconUrls": {}
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>
@@ -1279,12 +1358,12 @@ api.labels_players()
 {"items":
 [
   {
-    "name": {},
     "id": 0,
+    "name": "string",
     "iconUrls": {}
   }
 ],
-"paging": {'cursors': {}}
+"paging": {"cursors": {}}
 }
 ```
 </details>

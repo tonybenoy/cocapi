@@ -1,5 +1,5 @@
 """
-Clash of Clans API Wrapper - cocapi v3.0.0
+Clash of Clans API Wrapper - cocapi v3.1.0
 
 A Python wrapper for the official Clash of Clans API with enhanced features:
 - Async and sync support
@@ -64,8 +64,58 @@ from .middleware import (
 from .models import create_dynamic_model, get_pydantic_info, validate_pydantic_available
 from .utils import build_url, clean_tag, validate_params
 
+# Pydantic response models (optional - only available when pydantic is installed)
+try:
+    from .schemas import (
+        Achievement,
+        BadgeUrls,
+        BuilderBaseLeague,
+        CapitalLeague,
+        ChatLanguage,
+        Clan,
+        ClanBuilderBaseRankingEntry,
+        ClanCapital,
+        ClanCapitalRaidSeason,
+        ClanCapitalRankingEntry,
+        ClanMember,
+        ClanRankingEntry,
+        ClanSearchEntry,
+        ClanWar,
+        ClanWarLeagueClan,
+        ClanWarLeagueGroup,
+        ClanWarLeagueMember,
+        ClanWarLeagueRound,
+        ClanWarLogEntry,
+        GoldPassSeason,
+        Hero,
+        HeroEquipment,
+        IconUrls,
+        Label,
+        League,
+        LeagueSeason,
+        LeagueTier,
+        Location,
+        Paging,
+        Player,
+        PlayerBuilderBaseRankingEntry,
+        PlayerClan,
+        PlayerHouse,
+        PlayerRankingEntry,
+        Spell,
+        Troop,
+        VerifyTokenResponse,
+        WarAttack,
+        WarClan,
+        WarLeague,
+        WarMember,
+    )
+
+    _SCHEMAS_AVAILABLE = True
+except ImportError:
+    _SCHEMAS_AVAILABLE = False
+
 # Version info
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 __author__ = "Tony Benoy"
 __email__ = "me@tonybenoy.com"
 
@@ -102,5 +152,52 @@ __all__ = [
     "__author__",
     "__email__",
 ]
+
+# Conditionally add Pydantic model exports
+if _SCHEMAS_AVAILABLE:
+    __all__ += [
+        # Response models (require pydantic)
+        "Achievement",
+        "BadgeUrls",
+        "BuilderBaseLeague",
+        "CapitalLeague",
+        "ChatLanguage",
+        "Clan",
+        "ClanBuilderBaseRankingEntry",
+        "ClanCapital",
+        "ClanCapitalRaidSeason",
+        "ClanCapitalRankingEntry",
+        "ClanMember",
+        "ClanRankingEntry",
+        "ClanSearchEntry",
+        "ClanWar",
+        "ClanWarLeagueClan",
+        "ClanWarLeagueGroup",
+        "ClanWarLeagueMember",
+        "ClanWarLeagueRound",
+        "ClanWarLogEntry",
+        "GoldPassSeason",
+        "Hero",
+        "HeroEquipment",
+        "IconUrls",
+        "Label",
+        "League",
+        "LeagueSeason",
+        "LeagueTier",
+        "Location",
+        "Paging",
+        "Player",
+        "PlayerBuilderBaseRankingEntry",
+        "PlayerClan",
+        "PlayerHouse",
+        "PlayerRankingEntry",
+        "Spell",
+        "Troop",
+        "VerifyTokenResponse",
+        "WarAttack",
+        "WarClan",
+        "WarLeague",
+        "WarMember",
+    ]
 
 name = "cocapi"

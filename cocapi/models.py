@@ -18,7 +18,10 @@ def create_dynamic_model(
     response: Dict[str, Any], endpoint_type: str
 ) -> Union[Dict[str, Any], Any]:
     """
-    Create a dynamic Pydantic model from JSON response
+    Create a Pydantic model from JSON response.
+
+    First tries to match a concrete model from the schema registry.
+    Falls back to dynamic model generation for unknown endpoints.
 
     Args:
         response: The JSON response data
@@ -34,17 +37,21 @@ def create_dynamic_model(
     if response.get("result") == "error":
         return response
 
+    # 1. Try concrete model from schema registry
     try:
-        # Generate model name
+        from .model_registry import resolve_response
+
+        resolved = resolve_response(response, endpoint_type)
+        if resolved is not None:
+            return resolved
+    except ImportError:
+        pass  # schemas not installed, fall through to dynamic
+
+    # 2. Fallback to dynamic model generation
+    try:
         model_name = _generate_model_name(endpoint_type)
-
-        # Determine field types from response
         field_definitions = _analyze_response_structure(response)
-
-        # Create dynamic model
         DynamicModel = create_model(model_name, **field_definitions)
-
-        # Create and return model instance
         return DynamicModel(**response)
 
     except Exception as e:
