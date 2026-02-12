@@ -272,6 +272,22 @@ class EndpointTester:
             print(f"  [EXCEPTION] paginate(league): {e}")
             self.errors += 1
 
+        # --- BATCH ---
+        print("\n--- Batch ---")
+        try:
+            tags = [self.player_tag, self.player_tag]
+            results = self.api.batch(self.api.players, tags)
+            ok = all(isinstance(r, dict) and r.get("tag") for r in results)
+            if ok and len(results) == 2:
+                print(f"  [OK]       batch(players, 2 tags)")
+                self.ok += 1
+            else:
+                print(f"  [ERROR]    batch(players): unexpected result")
+                self.errors += 1
+        except Exception as e:
+            print(f"  [EXCEPTION] batch(players): {e}")
+            self.errors += 1
+
         # --- SUMMARY ---
         total = self.ok + self.errors + self.skipped
         print()

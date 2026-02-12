@@ -255,6 +255,54 @@ Works with any list endpoint: `clan_members`, `clan_war_log`, `clan_capitalraids
 
 > **Note**: `clan()` search has a special signature and should be paginated manually using the `params` dict if needed.
 
+## Batch Fetch
+
+Fetch multiple resources in one call. Sync runs sequentially; async runs concurrently with `asyncio.gather`:
+
+```python
+# Fetch multiple players at once
+results = api.batch(api.players, ["#TAG1", "#TAG2", "#TAG3"])
+for player in results:
+    print(player["name"], player["trophies"])
+
+# Methods with multiple args — pass tuples
+results = api.batch(api.league_season_id, [("29000022", "2025-01"), ("29000022", "2025-02")])
+```
+
+Async with concurrency control:
+
+```python
+async with CocApi("token") as api:
+    results = await api.batch(api.clan_tag, clan_tags, max_concurrent=5)
+```
+
+If one call fails, its position in the result list gets the error dict. Other calls are unaffected.
+
+## CLI
+
+Install with the `cli` extra:
+
+```bash
+pip install 'cocapi[cli]'
+```
+
+Set your token via `--token` or the `COCAPI_TOKEN` environment variable:
+
+```bash
+export COCAPI_TOKEN="your_token"
+
+cocapi clan "#2PP"
+cocapi player "#900PUCPV"
+cocapi members "#2PP" --limit 10
+cocapi war "#2PP"
+cocapi search "clash" --limit 5
+cocapi leagues
+cocapi goldpass
+cocapi locations
+```
+
+Add `--json` for raw JSON output.
+
 ## API Reference
 
 All methods work in both sync and async mode. In async, use `await`. Pagination parameters (`limit`, `after`, `before`) can be passed as a dict.

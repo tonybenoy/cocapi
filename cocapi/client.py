@@ -2,6 +2,7 @@
 Main CocApi client - simplified and modular version
 """
 
+import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -840,6 +841,73 @@ class CocApi(ApiMethods):
             if not after:
                 break
             params = {"limit": limit, "after": after}
+
+    # Batch fetch
+    def batch(
+        self,
+        method: Callable[..., Any],
+        args_list: list[Any],
+        max_concurrent: int | None = None,
+    ) -> list[dict[str, Any]] | Awaitable[list[dict[str, Any]]]:
+        """Fetch multiple resources in one call.
+
+        Args:
+            method:         An API method (e.g. ``api.players``).
+            args_list:      List of arguments — each element is passed to
+                            *method*.  Use tuples for methods that take
+                            multiple positional args.
+            max_concurrent: Limit concurrent requests in async mode
+                            (ignored in sync mode).
+
+        Returns:
+            List of response dicts (sync) or awaitable list (async).
+            Failed calls return their error dict in-place.
+
+        Example::
+
+            results = api.batch(api.players, ["#TAG1", "#TAG2", "#TAG3"])
+        """
+        if self.async_mode:
+            return self._abatch(method, args_list, max_concurrent)
+        return self._batch(method, args_list)
+
+    def _batch(
+        self,
+        method: Callable[..., Any],
+        args_list: list[Any],
+    ) -> list[dict[str, Any]]:
+        """Synchronous batch — sequential calls."""
+        results: list[dict[str, Any]] = []
+        for args in args_list:
+            if isinstance(args, (list, tuple)):
+                results.append(method(*args))
+            else:
+                results.append(method(args))
+        return results
+
+    async def _abatch(
+        self,
+        method: Callable[..., Any],
+        args_list: list[Any],
+        max_concurrent: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Asynchronous batch — concurrent calls with optional semaphore."""
+
+        async def _call(args: Any) -> dict[str, Any]:
+            if isinstance(args, (list, tuple)):
+                return await method(*args)
+            return await method(args)
+
+        if max_concurrent:
+            sem = asyncio.Semaphore(max_concurrent)
+
+            async def _limited(args: Any) -> dict[str, Any]:
+                async with sem:
+                    return await _call(args)
+
+            return list(await asyncio.gather(*[_limited(a) for a in args_list]))
+
+        return list(await asyncio.gather(*[_call(a) for a in args_list]))
 
     # V3.0.0 Enhanced Features
     def custom_endpoint(
