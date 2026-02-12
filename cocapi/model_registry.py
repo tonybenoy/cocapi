@@ -7,7 +7,7 @@ can fall back to dynamic model generation.
 """
 
 import re
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any
 
 try:
     from pydantic import BaseModel
@@ -47,13 +47,13 @@ except ImportError:
 _TAG = r"%23[A-Za-z0-9%]+"
 _ID = r"[0-9]+"
 
-# Each entry: (compiled regex, model class, is_paginated, item_model_or_None)
-# For paginated endpoints: is_paginated=True, item model is the list item type
+# Each entry: (compiled regex, model class, is_paginated)
+# For paginated endpoints: is_paginated=True, model is the list item type
 # For single-object endpoints: is_paginated=False, model is the response type
-_ENDPOINT_PATTERNS: List[Tuple[re.Pattern[str], Any, bool]] = []
+_ENDPOINT_PATTERNS: list[tuple[re.Pattern, Any, bool]] = []
 
 if SCHEMAS_AVAILABLE:
-    _PATTERNS_RAW: List[Tuple[str, Any, bool]] = [
+    _PATTERNS_RAW: list[tuple[str, Any, bool]] = [
         # --- Clans ---
         (rf"^/clans/{_TAG}$", Clan, False),
         (rf"^/clans/{_TAG}/members$", ClanMember, True),
@@ -115,7 +115,7 @@ if SCHEMAS_AVAILABLE:
 
 def get_model_for_endpoint(
     uri: str,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Look up the model class for an endpoint URI.
 
@@ -136,18 +136,19 @@ def get_model_for_endpoint(
     return None
 
 
-def resolve_response(response: Dict[str, Any], uri: str) -> Any:
+def resolve_response(response: dict[str, Any], uri: str) -> Any:
     """
     Resolve an API response dict into a Pydantic model if a matching
-    schema exists. Returns the original dict if no model is found or
-    if the response is an error.
+    schema exists.
 
     Args:
         response: The raw API response dict
         uri: The endpoint URI used for the request
 
     Returns:
-        A Pydantic model instance, or the original dict as fallback.
+        A Pydantic model instance for known endpoints, the original dict
+        for error responses, or None if no matching model is found (signals
+        the caller to use dynamic model fallback).
     """
     if not SCHEMAS_AVAILABLE:
         return response
@@ -159,7 +160,7 @@ def resolve_response(response: Dict[str, Any], uri: str) -> Any:
     if match is None:
         return None  # Signal caller to use dynamic fallback
 
-    model_class: Type[BaseModel] = match["model"]
+    model_class: type[BaseModel] = match["model"]
     is_paginated: bool = match["paginated"]
 
     try:

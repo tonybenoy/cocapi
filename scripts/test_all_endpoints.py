@@ -61,7 +61,6 @@ class EndpointTester:
             time.sleep(0.15)  # avoid rate limiting
             result = func(*args, **kwargs)
             is_error = isinstance(result, dict) and result.get("result") == "error"
-            error_type = result.get("error_type", "") if isinstance(result, dict) else ""
 
             if is_error:
                 if expected_error:

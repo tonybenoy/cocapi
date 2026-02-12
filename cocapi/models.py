@@ -3,7 +3,7 @@ Pydantic model generation for cocapi responses
 """
 
 import logging
-from typing import Any, Dict, Union
+from typing import Any
 
 try:
     from pydantic import BaseModel, create_model
@@ -15,8 +15,8 @@ except ImportError:
 
 
 def create_dynamic_model(
-    response: Dict[str, Any], endpoint_type: str
-) -> Union[Dict[str, Any], Any]:
+    response: dict[str, Any], endpoint_type: str
+) -> dict[str, Any] | Any:
     """
     Create a Pydantic model from JSON response.
 
@@ -68,7 +68,7 @@ def _generate_model_name(endpoint_type: str) -> str:
     return "".join(word.capitalize() for word in parts if word) + "Model"
 
 
-def _analyze_response_structure(data: Any, depth: int = 0) -> Dict[str, Any]:
+def _analyze_response_structure(data: Any, depth: int = 0) -> dict[str, Any]:
     """Analyze response structure to determine field types"""
     if depth > 5:  # Prevent infinite recursion
         return {"value": (Any, ...)}
@@ -124,7 +124,7 @@ def validate_pydantic_available() -> bool:
     return PYDANTIC_AVAILABLE
 
 
-def get_pydantic_info() -> Dict[str, Any]:
+def get_pydantic_info() -> dict[str, Any]:
     """Get information about Pydantic availability and version"""
     if not PYDANTIC_AVAILABLE:
         return {

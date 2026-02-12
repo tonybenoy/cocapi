@@ -111,7 +111,7 @@ try:
     )
 
     _SCHEMAS_AVAILABLE = True
-except ImportError:
+except (ImportError, SyntaxError):
     _SCHEMAS_AVAILABLE = False
 
 # Version info

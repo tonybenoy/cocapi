@@ -4,7 +4,7 @@ Async functionality for cocapi
 
 import asyncio
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -77,9 +77,9 @@ class AsyncCocApiCore:
         self.middleware = MiddlewareManager()
 
         # Async-specific attributes
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
         self._should_close_client = False
-        self._rate_limiter: Optional[AsyncRateLimiter] = None
+        self._rate_limiter: AsyncRateLimiter | None = None
 
         if config.enable_rate_limiting:
             self._rate_limiter = AsyncRateLimiter(
@@ -111,9 +111,9 @@ class AsyncCocApiCore:
     async def make_request(
         self,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Make an async API request
 
@@ -289,10 +289,10 @@ class AsyncCocApiCore:
     async def make_post_request(
         self,
         endpoint: str,
-        json_body: Dict[str, Any],
-        params: Optional[Dict[str, Any]] = None,
+        json_body: dict[str, Any],
+        params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Make an async POST API request
 
@@ -435,7 +435,7 @@ class AsyncCocApiCore:
             "error_type": "retry_exhausted",
         }
 
-    def _handle_http_error(self, status: int, attempt: int) -> Dict[str, Any]:
+    def _handle_http_error(self, status: int, attempt: int) -> dict[str, Any]:
         """Handle HTTP error responses"""
         error_messages = {
             400: "Bad request - check your parameters",
@@ -463,7 +463,7 @@ class AsyncCocApiCore:
 
         return error_response
 
-    def _handle_network_error(self, error: Exception, attempt: int) -> Dict[str, Any]:
+    def _handle_network_error(self, error: Exception, attempt: int) -> dict[str, Any]:
         """Handle network-related errors"""
         error_type = (
             "timeout" if isinstance(error, httpx.TimeoutException) else "connection"
@@ -474,7 +474,7 @@ class AsyncCocApiCore:
             "connection": "Connection error - check your internet connection",
         }
 
-        error_response: Dict[str, Any] = {
+        error_response: dict[str, Any] = {
             "result": "error",
             "message": messages[error_type],
             "error_type": error_type,
@@ -486,7 +486,7 @@ class AsyncCocApiCore:
 
         return error_response
 
-    def _handle_json_error(self, error: Exception, attempt: int) -> Dict[str, Any]:
+    def _handle_json_error(self, error: Exception, attempt: int) -> dict[str, Any]:
         """Handle JSON parsing errors"""
         return {
             "result": "error",
@@ -494,7 +494,7 @@ class AsyncCocApiCore:
             "error_type": "json",
         }
 
-    async def test_connection(self) -> Dict[str, Any]:
+    async def test_connection(self) -> dict[str, Any]:
         """Test API connection"""
         try:
             response = await self.make_request("/locations")
