@@ -286,11 +286,35 @@ Install with the `cli` extra:
 pip install 'cocapi[cli]'
 ```
 
-Set your token via `--token` or the `COCAPI_TOKEN` environment variable:
+### Login with credentials (persisted)
+
+Log in once with your developer portal email/password. The API key is saved to `~/.cocapi/keys.json` and reused automatically:
 
 ```bash
-export COCAPI_TOKEN="your_token"
+cocapi login --email you@example.com --password yourpass
 
+# Now all commands work without --token
+cocapi clan "#2PP"
+cocapi goldpass
+```
+
+### Other authentication methods
+
+```bash
+# Explicit token
+cocapi clan "#2PP" --token YOUR_TOKEN
+
+# Environment variable
+export COCAPI_TOKEN="YOUR_TOKEN"
+cocapi clan "#2PP"
+
+# Inline credentials (also persisted)
+cocapi clan "#2PP" --email you@example.com --password yourpass
+```
+
+### Commands
+
+```bash
 cocapi clan "#2PP"
 cocapi player "#900PUCPV"
 cocapi members "#2PP" --limit 10
