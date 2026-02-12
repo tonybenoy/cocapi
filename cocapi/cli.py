@@ -35,6 +35,8 @@ app = typer.Typer(
 _TOKEN_HELP = "API token (or set COCAPI_TOKEN env var)."
 _EMAIL_HELP = "Developer portal email (alternative to --token)."
 _PASSWORD_HELP = "Developer portal password (used with --email)."
+_JSON_HELP = "Output raw JSON."
+_LIMIT_HELP = "Max results."
 
 
 def _get_api(
@@ -145,7 +147,7 @@ def clan(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get clan information."""
     _output(_get_api(token, email, password).clan_tag(tag), as_json)
@@ -157,7 +159,7 @@ def player(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get player information."""
     _output(_get_api(token, email, password).players(tag), as_json)
@@ -170,7 +172,7 @@ def members(
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
     limit: int = typer.Option(50, "--limit", "-l", help="Max members to show."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List clan members."""
     _output(
@@ -184,7 +186,7 @@ def war(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get current clan war."""
     _output(_get_api(token, email, password).clan_current_war(tag), as_json)
@@ -196,7 +198,7 @@ def search(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    limit: int = typer.Option(10, "--limit", "-l", help="Max results."),
+    limit: int = typer.Option(10, "--limit", "-l", help=_LIMIT_HELP),
     war_frequency: str | None = typer.Option(
         None, "--war-frequency", help="Filter: always, moreThanOncePerWeek, etc."
     ),
@@ -218,7 +220,7 @@ def search(
     label_ids: str | None = typer.Option(
         None, "--label-ids", help="Comma-separated label IDs."
     ),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Search clans by name."""
     _output(
@@ -242,7 +244,7 @@ def leagues(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List leagues."""
     _output(_get_api(token, email, password).league(), as_json)
@@ -253,7 +255,7 @@ def goldpass(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get current gold pass season."""
     _output(_get_api(token, email, password).goldpass(), as_json)
@@ -264,8 +266,8 @@ def locations(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    limit: int = typer.Option(50, "--limit", "-l", help=_LIMIT_HELP),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List locations."""
     _output(_get_api(token, email, password).location({"limit": limit}), as_json)
@@ -278,7 +280,7 @@ def warlog(
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
     limit: int = typer.Option(20, "--limit", "-l", help="Max entries."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get clan war log."""
     _output(
@@ -292,7 +294,7 @@ def cwl(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get clan's current CWL league group."""
     _output(_get_api(token, email, password).clan_leaguegroup(tag), as_json)
@@ -305,7 +307,7 @@ def raids(
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
     limit: int = typer.Option(5, "--limit", "-l", help="Max seasons."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get clan capital raid seasons."""
     _output(
@@ -320,7 +322,7 @@ def cwl_war(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get a specific CWL war by war tag."""
     _output(_get_api(token, email, password).warleague(war_tag), as_json)
@@ -332,7 +334,7 @@ def location_info(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get info for a specific location by ID."""
     _output(_get_api(token, email, password).location_id(location_id), as_json)
@@ -347,8 +349,8 @@ def rankings(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    limit: int = typer.Option(20, "--limit", "-l", help="Max results."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    limit: int = typer.Option(20, "--limit", "-l", help=_LIMIT_HELP),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get rankings for a location.
 
@@ -386,7 +388,7 @@ def league_info(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Get info for a specific league by ID."""
     _output(_get_api(token, email, password).league_id(league_id), as_json)
@@ -401,8 +403,8 @@ def league_seasons(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    limit: int = typer.Option(50, "--limit", "-l", help=_LIMIT_HELP),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List league seasons, or get rankings for a specific season.
 
@@ -425,7 +427,7 @@ def war_leagues(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List war leagues, or get a specific war league by ID."""
     api = _get_api(token, email, password)
@@ -441,8 +443,8 @@ def capital_leagues(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    limit: int = typer.Option(50, "--limit", "-l", help=_LIMIT_HELP),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List capital leagues, or get a specific capital league by ID."""
     api = _get_api(token, email, password)
@@ -460,8 +462,8 @@ def builder_base_leagues(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    limit: int = typer.Option(50, "--limit", "-l", help=_LIMIT_HELP),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List builder base leagues, or get a specific one by ID."""
     api = _get_api(token, email, password)
@@ -477,8 +479,8 @@ def league_tiers(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results."),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    limit: int = typer.Option(50, "--limit", "-l", help=_LIMIT_HELP),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List league tiers, or get a specific tier by ID."""
     api = _get_api(token, email, password)
@@ -494,7 +496,7 @@ def labels(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """List labels for clans or players.
 
@@ -524,7 +526,7 @@ def verify_token(
     token: str | None = typer.Option(None, "--token", "-t", help=_TOKEN_HELP),
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Verify a player API token (from in-game settings)."""
     _output(

@@ -20,6 +20,23 @@ logger = logging.getLogger(__name__)
 _CLAN_EXCLUDE_FIELDS = frozenset({"memberList"})
 
 
+def _poll_error(tag: str, result: dict[str, Any], endpoint: str) -> Event:
+    """Create a POLL_ERROR event from an error response."""
+    return Event(
+        event_type=EventType.POLL_ERROR,
+        tag=tag,
+        metadata={
+            "error": result.get("message", "Unknown"),
+            "endpoint": endpoint,
+        },
+    )
+
+
+def _member_meta(member: dict[str, Any]) -> dict[str, Any]:
+    """Extract standard member metadata."""
+    return {"member_tag": member.get("tag"), "member_name": member.get("name")}
+
+
 class BaseWatcher:
     """Base class for all watchers.
 
@@ -64,8 +81,7 @@ class BaseWatcher:
             try:
                 await self._task
             except asyncio.CancelledError:
-                self._task = None
-                raise
+                pass  # Expected: we just cancelled this task
             self._task = None
 
     async def _loop(self) -> None:
@@ -108,7 +124,6 @@ class ClanWatcher(BaseWatcher):
 
     async def _poll_once(self) -> list[Event]:
         events: list[Event] = []
-
         for tag in self._clan_tags:
             resource_key = f"clan:{tag}"
             if not self._state.should_poll(resource_key, self._interval):
@@ -120,16 +135,7 @@ class ClanWatcher(BaseWatcher):
             self._state.mark_polled(resource_key)
 
             if result.get("result") == "error":
-                events.append(
-                    Event(
-                        event_type=EventType.POLL_ERROR,
-                        tag=tag,
-                        metadata={
-                            "error": result.get("message", "Unknown"),
-                            "endpoint": "clan_tag",
-                        },
-                    )
-                )
+                events.append(_poll_error(tag, result, "clan_tag"))
                 continue
 
             old = self._state.get_clan(tag)
@@ -147,106 +153,104 @@ class ClanWatcher(BaseWatcher):
                     )
 
             if self._track_members:
-                new_members = result.get("memberList", [])
-                old_members = self._state.get_members(tag)
-
-                if old_members is not None:
-                    joined, left, updated = diff_member_tags(old_members, new_members)
-
-                    for m in joined:
-                        events.append(
-                            Event(
-                                event_type=EventType.MEMBER_JOINED,
-                                tag=tag,
-                                new_data=m,
-                                metadata={
-                                    "member_tag": m.get("tag"),
-                                    "member_name": m.get("name"),
-                                },
-                            )
-                        )
-
-                    for m in left:
-                        events.append(
-                            Event(
-                                event_type=EventType.MEMBER_LEFT,
-                                tag=tag,
-                                old_data=m,
-                                metadata={
-                                    "member_tag": m.get("tag"),
-                                    "member_name": m.get("name"),
-                                },
-                            )
-                        )
-
-                    for old_m, new_m in updated:
-                        member_changes = diff_dicts(old_m, new_m)
-                        if member_changes:
-                            m_meta = {
-                                "member_tag": new_m.get("tag"),
-                                "member_name": new_m.get("name"),
-                            }
-                            events.append(
-                                Event(
-                                    event_type=EventType.MEMBER_UPDATED,
-                                    tag=tag,
-                                    old_data=old_m,
-                                    new_data=new_m,
-                                    changes=tuple(member_changes),
-                                    metadata=m_meta,
-                                )
-                            )
-                            change_fields = {c.field for c in member_changes}
-                            if "role" in change_fields:
-                                events.append(
-                                    Event(
-                                        event_type=EventType.MEMBER_ROLE_CHANGED,
-                                        tag=tag,
-                                        old_data=old_m,
-                                        new_data=new_m,
-                                        changes=tuple(
-                                            c
-                                            for c in member_changes
-                                            if c.field == "role"
-                                        ),
-                                        metadata={
-                                            **m_meta,
-                                            "old_role": old_m.get("role"),
-                                            "new_role": new_m.get("role"),
-                                        },
-                                    )
-                                )
-                            if change_fields & {
-                                "donations",
-                                "donationsReceived",
-                            }:
-                                events.append(
-                                    Event(
-                                        event_type=EventType.MEMBER_DONATIONS,
-                                        tag=tag,
-                                        old_data=old_m,
-                                        new_data=new_m,
-                                        changes=tuple(
-                                            c
-                                            for c in member_changes
-                                            if c.field
-                                            in ("donations", "donationsReceived")
-                                        ),
-                                        metadata={
-                                            **m_meta,
-                                            "donations": new_m.get("donations"),
-                                            "donationsReceived": new_m.get(
-                                                "donationsReceived"
-                                            ),
-                                        },
-                                    )
-                                )
-
-                self._state.set_members(tag, new_members)
+                self._diff_members(tag, result, events)
 
             self._state.set_clan(tag, result)
-
         return events
+
+    def _diff_members(
+        self,
+        tag: str,
+        result: dict[str, Any],
+        events: list[Event],
+    ) -> None:
+        """Diff member lists and append join/leave/update events."""
+        new_members = result.get("memberList", [])
+        old_members = self._state.get_members(tag)
+
+        if old_members is not None:
+            joined, left, updated = diff_member_tags(old_members, new_members)
+            for m in joined:
+                events.append(
+                    Event(
+                        event_type=EventType.MEMBER_JOINED,
+                        tag=tag,
+                        new_data=m,
+                        metadata=_member_meta(m),
+                    )
+                )
+            for m in left:
+                events.append(
+                    Event(
+                        event_type=EventType.MEMBER_LEFT,
+                        tag=tag,
+                        old_data=m,
+                        metadata=_member_meta(m),
+                    )
+                )
+            for old_m, new_m in updated:
+                self._diff_single_member(tag, old_m, new_m, events)
+
+        self._state.set_members(tag, new_members)
+
+    @staticmethod
+    def _diff_single_member(
+        tag: str,
+        old_m: dict[str, Any],
+        new_m: dict[str, Any],
+        events: list[Event],
+    ) -> None:
+        """Diff one member and emit update / role / donation events."""
+        member_changes = diff_dicts(old_m, new_m)
+        if not member_changes:
+            return
+
+        m_meta = _member_meta(new_m)
+        events.append(
+            Event(
+                event_type=EventType.MEMBER_UPDATED,
+                tag=tag,
+                old_data=old_m,
+                new_data=new_m,
+                changes=tuple(member_changes),
+                metadata=m_meta,
+            )
+        )
+        change_fields = {c.field for c in member_changes}
+        if "role" in change_fields:
+            events.append(
+                Event(
+                    event_type=EventType.MEMBER_ROLE_CHANGED,
+                    tag=tag,
+                    old_data=old_m,
+                    new_data=new_m,
+                    changes=tuple(c for c in member_changes if c.field == "role"),
+                    metadata={
+                        **m_meta,
+                        "old_role": old_m.get("role"),
+                        "new_role": new_m.get("role"),
+                    },
+                )
+            )
+        if change_fields & {"donations", "donationsReceived"}:
+            events.append(
+                Event(
+                    event_type=EventType.MEMBER_DONATIONS,
+                    tag=tag,
+                    old_data=old_m,
+                    new_data=new_m,
+                    changes=tuple(
+                        c
+                        for c in member_changes
+                        if c.field in ("donations", "donationsReceived")
+                    ),
+                    metadata={
+                        **m_meta,
+                        "donations": new_m.get("donations"),
+                        "donationsReceived": new_m.get("donationsReceived"),
+                    },
+                )
+            )
 
 
 class WarWatcher(BaseWatcher):
@@ -277,16 +281,7 @@ class WarWatcher(BaseWatcher):
             self._state.mark_polled(resource_key)
 
             if result.get("result") == "error":
-                events.append(
-                    Event(
-                        event_type=EventType.POLL_ERROR,
-                        tag=tag,
-                        metadata={
-                            "error": result.get("message", "Unknown"),
-                            "endpoint": "clan_current_war",
-                        },
-                    )
-                )
+                events.append(_poll_error(tag, result, "clan_current_war"))
                 continue
 
             raw_state = result.get("state", "notInWar")
@@ -413,7 +408,6 @@ class PlayerWatcher(BaseWatcher):
 
     async def _poll_once(self) -> list[Event]:
         events: list[Event] = []
-
         for tag in self._player_tags:
             resource_key = f"player:{tag}"
             if not self._state.should_poll(resource_key, self._interval):
@@ -425,96 +419,104 @@ class PlayerWatcher(BaseWatcher):
             self._state.mark_polled(resource_key)
 
             if result.get("result") == "error":
-                events.append(
-                    Event(
-                        event_type=EventType.POLL_ERROR,
-                        tag=tag,
-                        metadata={
-                            "error": result.get("message", "Unknown"),
-                            "endpoint": "players",
-                        },
-                    )
-                )
+                events.append(_poll_error(tag, result, "players"))
                 continue
 
             old = self._state.get_player(tag)
             if old is not None:
-                # Generic top-level diff (excludes nested lists handled below)
-                generic_exclude = (
-                    self._exclude_fields or frozenset()
-                ) | self._NESTED_LIST_FIELDS
-                if self._include_fields is not None:
-                    # If user specified include_fields, only exclude nested lists
-                    # that aren't in include_fields
-                    generic_exclude = (self._exclude_fields or frozenset()) | (
-                        self._NESTED_LIST_FIELDS - self._include_fields
-                    )
-                generic_changes = diff_dicts(
-                    old,
-                    result,
-                    include_fields=self._include_fields,
-                    exclude_fields=generic_exclude,
-                )
-
-                # Emit specific events for special fields
-                for change in list(generic_changes):
-                    if change.field in self._SPECIAL_FIELDS:
-                        events.append(
-                            Event(
-                                event_type=self._SPECIAL_FIELDS[change.field],
-                                tag=tag,
-                                old_data=old,
-                                new_data=result,
-                                changes=(change,),
-                                metadata={
-                                    "old_value": change.old_value,
-                                    "new_value": change.new_value,
-                                },
-                            )
-                        )
-
-                # Emit PLAYER_UPDATED for remaining top-level changes
-                if generic_changes:
-                    events.append(
-                        Event(
-                            event_type=EventType.PLAYER_UPDATED,
-                            tag=tag,
-                            old_data=old,
-                            new_data=result,
-                            changes=tuple(generic_changes),
-                        )
-                    )
-
-                # Nested list diffs (troops, spells, heroes, equipment)
-                for list_field, event_type in self._LIST_EVENT_MAP.items():
-                    if not self._field_enabled(list_field):
-                        continue
-                    old_items = old.get(list_field, [])
-                    new_items = result.get(list_field, [])
-                    upgraded = diff_named_list(old_items, new_items)
-                    for name, old_level, new_level in upgraded:
-                        events.append(
-                            Event(
-                                event_type=event_type,
-                                tag=tag,
-                                changes=(
-                                    Change(
-                                        field=name,
-                                        old_value=old_level,
-                                        new_value=new_level,
-                                    ),
-                                ),
-                                metadata={
-                                    "name": name,
-                                    "old_level": old_level,
-                                    "new_level": new_level,
-                                },
-                            )
-                        )
+                self._diff_player(tag, old, result, events)
 
             self._state.set_player(tag, result)
-
         return events
+
+    def _diff_player(
+        self,
+        tag: str,
+        old: dict[str, Any],
+        new: dict[str, Any],
+        events: list[Event],
+    ) -> None:
+        """Diff old vs new player data and append events."""
+        generic_changes = diff_dicts(
+            old,
+            new,
+            include_fields=self._include_fields,
+            exclude_fields=self._generic_exclude(),
+        )
+        self._emit_special_field_events(tag, old, new, generic_changes, events)
+        if generic_changes:
+            events.append(
+                Event(
+                    event_type=EventType.PLAYER_UPDATED,
+                    tag=tag,
+                    old_data=old,
+                    new_data=new,
+                    changes=tuple(generic_changes),
+                )
+            )
+        self._diff_nested_lists(tag, old, new, events)
+
+    def _generic_exclude(self) -> frozenset[str]:
+        """Build the exclude set for the top-level diff."""
+        base = self._exclude_fields or frozenset()
+        if self._include_fields is not None:
+            return base | (self._NESTED_LIST_FIELDS - self._include_fields)
+        return base | self._NESTED_LIST_FIELDS
+
+    def _emit_special_field_events(
+        self,
+        tag: str,
+        old: dict[str, Any],
+        new: dict[str, Any],
+        changes: list[Change],
+        events: list[Event],
+    ) -> None:
+        """Emit typed events for special top-level fields."""
+        for change in changes:
+            if change.field in self._SPECIAL_FIELDS:
+                events.append(
+                    Event(
+                        event_type=self._SPECIAL_FIELDS[change.field],
+                        tag=tag,
+                        old_data=old,
+                        new_data=new,
+                        changes=(change,),
+                        metadata={
+                            "old_value": change.old_value,
+                            "new_value": change.new_value,
+                        },
+                    )
+                )
+
+    def _diff_nested_lists(
+        self,
+        tag: str,
+        old: dict[str, Any],
+        new: dict[str, Any],
+        events: list[Event],
+    ) -> None:
+        """Diff nested lists (troops, spells, heroes, equipment)."""
+        for list_field, event_type in self._LIST_EVENT_MAP.items():
+            if not self._field_enabled(list_field):
+                continue
+            upgraded = diff_named_list(old.get(list_field, []), new.get(list_field, []))
+            for name, old_level, new_level in upgraded:
+                events.append(
+                    Event(
+                        event_type=event_type,
+                        tag=tag,
+                        changes=(
+                            Change(
+                                field=name, old_value=old_level, new_value=new_level
+                            ),
+                        ),
+                        metadata={
+                            "name": name,
+                            "old_level": old_level,
+                            "new_level": new_level,
+                        },
+                    )
+                )
 
 
 class MaintenanceWatcher(BaseWatcher):
