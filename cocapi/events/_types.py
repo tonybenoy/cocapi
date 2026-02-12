@@ -29,6 +29,8 @@ class EventType(enum.Enum):
     PLAYER_NAME_CHANGED = "player_name_changed"
     PLAYER_LEAGUE_CHANGED = "player_league_changed"
     PLAYER_LABEL_CHANGED = "player_label_changed"
+    MAINTENANCE_START = "maintenance_start"
+    MAINTENANCE_END = "maintenance_end"
     POLL_ERROR = "poll_error"
 
 

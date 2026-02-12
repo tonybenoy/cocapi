@@ -369,6 +369,7 @@ class CocApi(ApiMethods):
                                         _refresh_attempted=True,
                                     )
                         except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
                             pass
 
                     # Handle HTTP errors
@@ -449,7 +450,7 @@ class CocApi(ApiMethods):
         self, response: dict[str, Any], status_code: int
     ) -> dict[str, Any]:
         """Add status code to response if requested (backward compatibility)"""
-        if self.status_code:
+        if self.status_code and isinstance(response, dict):
             response["status_code"] = status_code
         return response
 
@@ -560,14 +561,14 @@ class CocApi(ApiMethods):
         """Synchronous POST API response handling"""
         start_time = time.time()
 
-        # Build URL
-        url = build_url(self.config.base_url, uri, params)
-
-        # Apply request middleware
+        # Apply request middleware before building URL so middleware can modify params
         headers = self.headers.copy()
-        url, headers, request_params = self.middleware.apply_request_middleware(
-            url, headers, params or {}
+        url_base = build_url(self.config.base_url, uri, None)
+        url_base, headers, request_params = self.middleware.apply_request_middleware(
+            url_base, headers, params or {}
         )
+        # Rebuild URL with (potentially modified) params
+        url = build_url(self.config.base_url, uri, request_params or None)
 
         # Make the request with retries
         for attempt in range(self.config.max_retries):
@@ -635,6 +636,7 @@ class CocApi(ApiMethods):
                                         _refresh_attempted=True,
                                     )
                         except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
                             pass
 
                     error_response = self._handle_http_error(
@@ -812,7 +814,7 @@ class CocApi(ApiMethods):
         """Synchronous pagination generator."""
         params: dict[str, Any] = {"limit": limit}
         while True:
-            result = method(*args, params)
+            result = method(*args, params=params)
             items = extract_items(result)
             if not items:
                 break
@@ -831,7 +833,7 @@ class CocApi(ApiMethods):
         """Asynchronous pagination generator."""
         params: dict[str, Any] = {"limit": limit}
         while True:
-            result = await method(*args, params)
+            result = await method(*args, params=params)
             items = extract_items(result)
             if not items:
                 break

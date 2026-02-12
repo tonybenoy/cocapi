@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, cast
 
@@ -511,5 +512,69 @@ class PlayerWatcher(BaseWatcher):
                         )
 
             self._state.set_player(tag, result)
+
+        return events
+
+
+class MaintenanceWatcher(BaseWatcher):
+    """Detects API maintenance windows by polling a known endpoint.
+
+    Emits ``MAINTENANCE_START`` when the API starts returning errors
+    (HTTP 503 or connection failures) and ``MAINTENANCE_END`` when it
+    recovers.  Uses a configurable probe tag (defaults to a well-known
+    player ``#JY9J2Y99``).
+    """
+
+    def __init__(
+        self,
+        api: CocApi,
+        state: PollingState,
+        queue: asyncio.Queue[Event],
+        interval: float = 30.0,
+        probe_tag: str = "#JY9J2Y99",
+    ) -> None:
+        super().__init__(api, state, queue, interval)
+        self._probe_tag = probe_tag
+        self._in_maintenance = False
+        self._maintenance_start_time: float | None = None
+
+    async def _poll_once(self) -> list[Event]:
+        result: dict[str, Any] = await cast(
+            Awaitable[dict[str, Any]], self._api.players(self._probe_tag)
+        )
+
+        is_error = result.get("result") == "error" and result.get("status_code") == 503
+
+        events: list[Event] = []
+
+        if is_error and not self._in_maintenance:
+            self._in_maintenance = True
+            self._maintenance_start_time = time.time()
+            events.append(
+                Event(
+                    event_type=EventType.MAINTENANCE_START,
+                    tag="",
+                    metadata={
+                        "message": result.get("message", "Service Unavailable"),
+                    },
+                )
+            )
+        elif not is_error and self._in_maintenance:
+            self._in_maintenance = False
+            duration = (
+                time.time() - self._maintenance_start_time
+                if self._maintenance_start_time is not None
+                else 0.0
+            )
+            self._maintenance_start_time = None
+            events.append(
+                Event(
+                    event_type=EventType.MAINTENANCE_END,
+                    tag="",
+                    metadata={
+                        "duration_seconds": round(duration, 1),
+                    },
+                )
+            )
 
         return events

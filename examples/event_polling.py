@@ -33,6 +33,8 @@ async def main() -> None:
         stream.watch_wars(["#2PP"], interval=30)
         # Watch players — all upgrade events are detected automatically
         stream.watch_players(["#900PUCPV"], interval=120)
+        # Detect API maintenance windows (503 responses)
+        stream.watch_maintenance(interval=30)
 
         async with stream:  # Starts watchers, stops on exit
             async for event in stream:
@@ -82,6 +84,13 @@ async def main() -> None:
 
                 elif event.event_type == EventType.TOWNHALL_UPGRADED:
                     print(f"  TH {event.metadata['old_value']} -> {event.metadata['new_value']}")
+
+                elif event.event_type == EventType.MAINTENANCE_START:
+                    print("  API is under maintenance!")
+
+                elif event.event_type == EventType.MAINTENANCE_END:
+                    secs = event.metadata["duration_seconds"]
+                    print(f"  Maintenance ended after {secs}s")
 
                 elif event.event_type == EventType.POLL_ERROR:
                     print(f"  Error: {event.metadata['error']}")

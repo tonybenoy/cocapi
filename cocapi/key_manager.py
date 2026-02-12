@@ -19,6 +19,8 @@ Developer Portal Internal API Endpoints:
 import ipaddress
 import json
 import logging
+import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -169,6 +171,8 @@ def _save_cached_keys(
 ) -> None:
     """Save tokens to disk, merging with any existing entries."""
     try:
+        # Resolve to absolute and ensure it stays under the expected parent
+        cache_path = cache_path.resolve()
         cache_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Merge with existing data (other key_names)
@@ -185,6 +189,9 @@ def _save_cached_keys(
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         cache_path.write_text(json.dumps(data, indent=2))
+        # Restrict file permissions to owner-only (0600)
+        if sys.platform != "win32":
+            os.chmod(cache_path, 0o600)
         logger.info("Saved %d token(s) to %s", len(tokens), cache_path)
     except OSError as e:
         logger.warning("Failed to save key cache to %s: %s", cache_path, e)
@@ -193,12 +200,15 @@ def _save_cached_keys(
 def _invalidate_cached_keys(cache_path: Path, key_name: str) -> None:
     """Remove a specific key_name entry from the cache file."""
     try:
+        cache_path = cache_path.resolve()
         if not cache_path.is_file():
             return
         data = json.loads(cache_path.read_text())
         if key_name in data:
             del data[key_name]
             cache_path.write_text(json.dumps(data, indent=2))
+            if sys.platform != "win32":
+                os.chmod(cache_path, 0o600)
             logger.info("Invalidated cached keys for '%s'", key_name)
     except (json.JSONDecodeError, OSError) as e:
         logger.debug("Failed to invalidate key cache: %s", e)
@@ -312,7 +322,15 @@ class SyncKeyManager:
                 "Make sure you're using your developer portal credentials."
             )
 
-        data = resp.json()
+        if resp.status_code != 200:
+            raise KeyManagerError(
+                f"Developer portal login returned HTTP {resp.status_code}"
+            )
+
+        try:
+            data = resp.json()
+        except (ValueError, TypeError) as e:
+            raise KeyManagerError(f"Invalid JSON from login endpoint: {e}") from e
 
         status_msg = data.get("status", {}).get("message", "")
         if status_msg and status_msg != "ok":
@@ -335,7 +353,12 @@ class SyncKeyManager:
     def _list_keys(self) -> list[dict[str, Any]]:
         """List all API keys on the account."""
         resp = self._client.post(_KEY_LIST_URL, json={}, timeout=30)
-        data = resp.json()
+        if resp.status_code != 200:
+            raise KeyManagerError(f"Failed to list keys: HTTP {resp.status_code}")
+        try:
+            data = resp.json()
+        except (ValueError, TypeError) as e:
+            raise KeyManagerError(f"Invalid JSON from key list endpoint: {e}") from e
         keys = data.get("keys", [])
         logger.info("Found %d existing keys on account", len(keys))
         return keys
@@ -356,7 +379,12 @@ class SyncKeyManager:
             },
             timeout=30,
         )
-        data = resp.json()
+        if resp.status_code != 200:
+            raise KeyManagerError(f"Failed to create key: HTTP {resp.status_code}")
+        try:
+            data = resp.json()
+        except (ValueError, TypeError) as e:
+            raise KeyManagerError(f"Invalid JSON from key create endpoint: {e}") from e
 
         if "key" not in data:
             error_msg = data.get("status", {}).get("message", "Unknown error")
@@ -595,7 +623,15 @@ class AsyncKeyManager:
                 "Make sure you're using your developer portal credentials."
             )
 
-        data = resp.json()
+        if resp.status_code != 200:
+            raise KeyManagerError(
+                f"Developer portal login returned HTTP {resp.status_code}"
+            )
+
+        try:
+            data = resp.json()
+        except (ValueError, TypeError) as e:
+            raise KeyManagerError(f"Invalid JSON from login endpoint: {e}") from e
 
         status_msg = data.get("status", {}).get("message", "")
         if status_msg and status_msg != "ok":
@@ -618,7 +654,12 @@ class AsyncKeyManager:
         """List all API keys on the account."""
         assert self._client is not None
         resp = await self._client.post(_KEY_LIST_URL, json={}, timeout=30)
-        data = resp.json()
+        if resp.status_code != 200:
+            raise KeyManagerError(f"Failed to list keys: HTTP {resp.status_code}")
+        try:
+            data = resp.json()
+        except (ValueError, TypeError) as e:
+            raise KeyManagerError(f"Invalid JSON from key list endpoint: {e}") from e
         keys = data.get("keys", [])
         logger.info("Found %d existing keys on account", len(keys))
         return keys
@@ -640,7 +681,12 @@ class AsyncKeyManager:
             },
             timeout=30,
         )
-        data = resp.json()
+        if resp.status_code != 200:
+            raise KeyManagerError(f"Failed to create key: HTTP {resp.status_code}")
+        try:
+            data = resp.json()
+        except (ValueError, TypeError) as e:
+            raise KeyManagerError(f"Invalid JSON from key create endpoint: {e}") from e
 
         if "key" not in data:
             error_msg = data.get("status", {}).get("message", "Unknown error")

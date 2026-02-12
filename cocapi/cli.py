@@ -10,16 +10,14 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from typing import Any
 
 try:
     import typer
 except ImportError:
-    print(
+    raise ImportError(
         "The cocapi CLI requires typer. Install it with:\n  pip install 'cocapi[cli]'"
-    )
-    sys.exit(1)
+    ) from None
 
 from cocapi import ApiConfig, CocApi
 from cocapi.key_manager import _DEFAULT_KEY_STORAGE_PATH, _load_cached_keys

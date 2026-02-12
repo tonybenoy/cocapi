@@ -8,7 +8,12 @@ from unittest.mock import AsyncMock, patch
 from cocapi import CocApi
 from cocapi.events._state import PollingState
 from cocapi.events._types import Event, EventType
-from cocapi.events._watchers import ClanWatcher, PlayerWatcher, WarWatcher
+from cocapi.events._watchers import (
+    ClanWatcher,
+    MaintenanceWatcher,
+    PlayerWatcher,
+    WarWatcher,
+)
 
 
 @pytest.fixture()
@@ -584,3 +589,102 @@ class TestPlayerWatcher:
         assert EventType.TROOP_UPGRADED in types
         assert EventType.HERO_UPGRADED in types
         assert EventType.PLAYER_UPDATED in types
+
+
+# ---------------------------------------------------------------------------
+# MaintenanceWatcher
+# ---------------------------------------------------------------------------
+
+
+class TestMaintenanceWatcher:
+    @pytest.mark.asyncio
+    async def test_no_event_when_api_healthy(self, api, state, queue):
+        api.players = AsyncMock(return_value={"tag": "#JY9J2Y99", "name": "Probe"})
+
+        watcher = MaintenanceWatcher(api, state, queue, interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 0
+        assert not watcher._in_maintenance
+
+    @pytest.mark.asyncio
+    async def test_maintenance_start_on_503(self, api, state, queue):
+        api.players = AsyncMock(
+            return_value={
+                "result": "error",
+                "message": "Service Unavailable",
+                "status_code": 503,
+            }
+        )
+
+        watcher = MaintenanceWatcher(api, state, queue, interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        assert events[0].event_type == EventType.MAINTENANCE_START
+        assert watcher._in_maintenance
+
+    @pytest.mark.asyncio
+    async def test_no_duplicate_maintenance_start(self, api, state, queue):
+        api.players = AsyncMock(
+            return_value={
+                "result": "error",
+                "message": "Service Unavailable",
+                "status_code": 503,
+            }
+        )
+
+        watcher = MaintenanceWatcher(api, state, queue, interval=1.0)
+        await watcher._poll_once()  # triggers MAINTENANCE_START
+        events = await watcher._poll_once()  # still 503, no new event
+
+        assert len(events) == 0
+
+    @pytest.mark.asyncio
+    async def test_maintenance_end_on_recovery(self, api, state, queue):
+        # Start in maintenance
+        api.players = AsyncMock(
+            return_value={
+                "result": "error",
+                "message": "Service Unavailable",
+                "status_code": 503,
+            }
+        )
+        watcher = MaintenanceWatcher(api, state, queue, interval=1.0)
+        await watcher._poll_once()
+
+        # API recovers
+        api.players = AsyncMock(return_value={"tag": "#JY9J2Y99", "name": "Probe"})
+        events = await watcher._poll_once()
+
+        assert len(events) == 1
+        assert events[0].event_type == EventType.MAINTENANCE_END
+        assert "duration_seconds" in events[0].metadata
+        assert not watcher._in_maintenance
+
+    @pytest.mark.asyncio
+    async def test_non_503_error_not_maintenance(self, api, state, queue):
+        api.players = AsyncMock(
+            return_value={
+                "result": "error",
+                "message": "Not found",
+                "status_code": 404,
+            }
+        )
+
+        watcher = MaintenanceWatcher(api, state, queue, interval=1.0)
+        events = await watcher._poll_once()
+
+        assert len(events) == 0
+        assert not watcher._in_maintenance
+
+    @pytest.mark.asyncio
+    async def test_custom_probe_tag(self, api, state, queue):
+        api.players = AsyncMock(return_value={"tag": "#CUSTOM", "name": "Test"})
+
+        watcher = MaintenanceWatcher(
+            api, state, queue, interval=1.0, probe_tag="#CUSTOM"
+        )
+        await watcher._poll_once()
+
+        api.players.assert_called_once_with("#CUSTOM")

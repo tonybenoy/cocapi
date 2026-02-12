@@ -24,6 +24,7 @@ async def main() -> None:
         stream.watch_clans(["#2PP"], interval=60)
         stream.watch_wars(["#2PP"], interval=30)
         stream.watch_players(["#900PUCPV"], interval=120)
+        stream.watch_maintenance(interval=30)
 
         # --- Typed callbacks with decorators ---
 
@@ -70,6 +71,14 @@ async def main() -> None:
         @stream.on(EventType.TOWNHALL_UPGRADED)
         async def on_th(event: Event) -> None:
             print(f"[TH] {event.tag}: TH{event.metadata['old_value']} -> TH{event.metadata['new_value']}")
+
+        @stream.on(EventType.MAINTENANCE_START)
+        async def on_maint_start(event: Event) -> None:
+            print("[MAINT] API is under maintenance!")
+
+        @stream.on(EventType.MAINTENANCE_END)
+        async def on_maint_end(event: Event) -> None:
+            print(f"[MAINT] Back online after {event.metadata['duration_seconds']}s")
 
         # --- Wildcard: fires on every event ---
 

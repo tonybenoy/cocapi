@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from ._state import PollingState
 from ._types import Event, EventType
-from ._watchers import ClanWatcher, PlayerWatcher, WarWatcher
+from ._watchers import ClanWatcher, MaintenanceWatcher, PlayerWatcher, WarWatcher
 
 if TYPE_CHECKING:
     from cocapi import CocApi
@@ -61,7 +61,9 @@ class EventStream:
         self._api = api
         self._state = PollingState()
         self._queue: asyncio.Queue[Event] = asyncio.Queue(maxsize=queue_size)
-        self._watchers: list[ClanWatcher | WarWatcher | PlayerWatcher] = []
+        self._watchers: list[
+            ClanWatcher | WarWatcher | PlayerWatcher | MaintenanceWatcher
+        ] = []
         self._callbacks: dict[EventType | None, list[EventCallback]] = {}
         self._running = False
         self._persist_path = Path(persist_path) if persist_path else None
@@ -139,6 +141,30 @@ class EventStream:
             interval=interval,
             include_fields=include_fields,
             exclude_fields=exclude_fields,
+        )
+        self._watchers.append(watcher)
+        return self
+
+    def watch_maintenance(
+        self,
+        interval: float = 30.0,
+        probe_tag: str = "#JY9J2Y99",
+    ) -> EventStream:
+        """Enable API maintenance detection.
+
+        Polls a known player endpoint to detect 503 maintenance responses.
+        Emits ``MAINTENANCE_START`` and ``MAINTENANCE_END`` events.
+
+        Args:
+            interval: Seconds between probes (default 30).
+            probe_tag: Player tag to probe (default ``#JY9J2Y99``).
+        """
+        watcher = MaintenanceWatcher(
+            api=self._api,
+            state=self._state,
+            queue=self._queue,
+            interval=interval,
+            probe_tag=probe_tag,
         )
         self._watchers.append(watcher)
         return self

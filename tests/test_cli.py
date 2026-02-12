@@ -11,7 +11,7 @@ from unittest.mock import patch
 from cocapi import CocApi
 
 # Only run CLI tests if typer is installed
-typer = pytest.importorskip("typer")
+pytest.importorskip("typer")
 from typer.testing import CliRunner
 
 from cocapi.cli import app

@@ -294,6 +294,7 @@ class AsyncCocApiCore:
                                         _refresh_attempted=True,
                                     )
                         except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
                             pass
 
                     # Handle HTTP errors
@@ -387,18 +388,18 @@ class AsyncCocApiCore:
         """
         start_time = time.time()
 
-        # Build URL
-        url = build_url(self.config.base_url, endpoint, params)
-
         # Apply rate limiting
         if self._rate_limiter:
             await self._rate_limiter.acquire()
 
-        # Apply request middleware
+        # Apply request middleware before building URL so middleware can modify params
         headers = self.headers.copy()
-        url, headers, params = self.middleware.apply_request_middleware(
-            url, headers, params or {}
+        url_base = build_url(self.config.base_url, endpoint, None)
+        url_base, headers, params = self.middleware.apply_request_middleware(
+            url_base, headers, params or {}
         )
+        # Rebuild URL with (potentially modified) params
+        url = build_url(self.config.base_url, endpoint, params or None)
 
         # Make the request with retries
         for attempt in range(self.config.max_retries):
@@ -467,6 +468,7 @@ class AsyncCocApiCore:
                                         _refresh_attempted=True,
                                     )
                         except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
                             pass
 
                     error_response = self._handle_http_error(
@@ -550,7 +552,7 @@ class AsyncCocApiCore:
         error_response = {
             "result": "error",
             "message": error_messages.get(status, f"HTTP error {status}"),
-            "status_code": status,
+            "http_status": status,
             "error_type": "http",
         }
 

@@ -3,6 +3,7 @@
         <img src="https://github.com/tonybenoy/cocapi/workflows/CI/badge.svg" alt="CI Status" height="20">
     </a>
     <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/v/cocapi" alt="Pypi version" height="21"></a>
+    <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/dm/cocapi" alt="PyPI Downloads" height="21"></a>
 </p>
 <p>
     <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python version" height="17"></a>
@@ -325,6 +326,8 @@ asyncio.run(main())
 | `PLAYER_NAME_CHANGED` | Player name changed |
 | `PLAYER_LEAGUE_CHANGED` | Player league changed |
 | `PLAYER_LABEL_CHANGED` | Player labels added or removed |
+| `MAINTENANCE_START` | API entered maintenance mode (HTTP 503) |
+| `MAINTENANCE_END` | API recovered from maintenance |
 | `POLL_ERROR` | API error during polling (watcher continues) |
 
 ### Callbacks
@@ -351,6 +354,7 @@ await stream.run()  # Blocks, dispatches to callbacks
 - **Field filtering** for player watchers: `watch_players(tags, include_fields=frozenset({"trophies"}))` or `exclude_fields`
 - **Member tracking**: `watch_clans(tags, track_members=False)` to skip join/leave/update detection
 - **Backpressure**: `EventStream(api, queue_size=1000)` — bounded queue prevents unbounded memory growth
+- **Maintenance detection**: `stream.watch_maintenance(interval=30)` — detects API 503 maintenance windows
 - **State persistence**: `EventStream(api, persist_path="state.json")` — saves snapshots on stop, restores on start
 
 ## Examples
@@ -890,7 +894,7 @@ result = api.clan_tag("#INVALID")
 if result.get("result") == "error":
     print(result["message"])      # Human-readable message
     print(result["error_type"])   # "timeout", "connection", "http", "json", "retry_exhausted", "unknown"
-    print(result.get("status_code"))  # HTTP status code if applicable
+    print(result.get("http_status"))  # HTTP status code (present for "http" error_type)
 ```
 
 ## Pydantic Models

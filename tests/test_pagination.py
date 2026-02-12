@@ -3,9 +3,9 @@ Tests for the paginate() helper on CocApi.
 """
 
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
-from cocapi import CocApi, ApiConfig
+from cocapi import CocApi
 from cocapi.utils import extract_after_cursor, extract_items
 
 

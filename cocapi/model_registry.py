@@ -31,7 +31,6 @@ try:
         LeagueSeason,
         LeagueTier,
         Location,
-        Paging,
         Player,
         PlayerBuilderBaseRankingEntry,
         PlayerRankingEntry,
@@ -168,10 +167,8 @@ def resolve_response(response: dict[str, Any], uri: str) -> Any:
             # Validate each item in the list
             items = response.get("items", [])
             validated_items = [model_class.model_validate(item) for item in items]
-            paging = None
-            if "paging" in response:
-                paging = Paging.model_validate(response["paging"])
-            # Return a dict-like structure with validated models
+            # Keep paging as a plain dict so extract_after_cursor() can use .get()
+            paging = response.get("paging")
             return {
                 "items": validated_items,
                 "paging": paging,

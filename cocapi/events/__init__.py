@@ -23,7 +23,13 @@ from ._state import PollingState
 from ._stream import EventStream
 from ._types import Change, Event, EventType, WarState
 from ._war_fsm import WarStateMachine
-from ._watchers import BaseWatcher, ClanWatcher, PlayerWatcher, WarWatcher
+from ._watchers import (
+    BaseWatcher,
+    ClanWatcher,
+    MaintenanceWatcher,
+    PlayerWatcher,
+    WarWatcher,
+)
 
 __all__ = [
     "EventStream",
@@ -35,6 +41,7 @@ __all__ = [
     "ClanWatcher",
     "WarWatcher",
     "PlayerWatcher",
+    "MaintenanceWatcher",
     "PollingState",
     "WarStateMachine",
     "diff_dicts",
