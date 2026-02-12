@@ -3,6 +3,7 @@ Async functionality for cocapi
 """
 
 import asyncio
+import logging
 import time
 from typing import Any
 
@@ -81,6 +82,15 @@ class AsyncCocApiCore:
         self._should_close_client = False
         self._rate_limiter: AsyncRateLimiter | None = None
 
+        # Key manager state (set via set_key_manager_state())
+        self._km_email: str | None = None
+        self._km_password: str | None = None
+        self._km_key_name: str | None = None
+        self._km_key_count: int = 1
+        self._km_auto_refresh: bool = False
+        self._km_persist_keys: bool = False
+        self._km_key_storage_path: str | None = None
+
         if config.enable_rate_limiting:
             self._rate_limiter = AsyncRateLimiter(
                 rate=config.requests_per_second, burst=config.burst_limit
@@ -108,11 +118,61 @@ class AsyncCocApiCore:
             self._client = None
             self._should_close_client = False
 
+    def set_key_manager_state(
+        self,
+        email: str,
+        password: str,
+        key_name: str,
+        key_count: int,
+        auto_refresh: bool,
+        persist_keys: bool = False,
+        key_storage_path: str | None = None,
+    ) -> None:
+        """Store key manager credentials for auto-refresh on 403."""
+        self._km_email = email
+        self._km_password = password
+        self._km_key_name = key_name
+        self._km_key_count = key_count
+        self._km_auto_refresh = auto_refresh
+        self._km_persist_keys = persist_keys
+        self._km_key_storage_path = key_storage_path
+
+    def _should_auto_refresh_keys(self) -> bool:
+        """Check if auto key refresh is available and enabled."""
+        return self._km_email is not None and self._km_auto_refresh
+
+    async def _refresh_token(self) -> bool:
+        """Refresh API token via AsyncKeyManager. Returns True if successful."""
+        from .key_manager import AsyncKeyManager
+
+        try:
+            async with AsyncKeyManager(
+                email=self._km_email,  # type: ignore[arg-type]
+                password=self._km_password,  # type: ignore[arg-type]
+                key_name=self._km_key_name or "cocapi_auto",
+                key_count=self._km_key_count,
+                persist_keys=self._km_persist_keys,
+                key_storage_path=self._km_key_storage_path,
+            ) as km:
+                tokens = await km.refresh_keys()
+
+            if tokens:
+                self.token = tokens[0]
+                self.headers["authorization"] = f"Bearer {self.token}"
+                self.cache.clear()
+                logging.info("API token refreshed via AsyncKeyManager")
+                return True
+        except Exception as e:
+            logging.warning("Async token refresh failed: %s", e)
+
+        return False
+
     async def make_request(
         self,
         endpoint: str,
         params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
+        _refresh_attempted: bool = False,
     ) -> dict[str, Any]:
         """
         Make an async API request
@@ -217,6 +277,26 @@ class AsyncCocApiCore:
                     return json_response
 
                 else:
+                    # Auto-refresh on accessDenied.invalidIp (once only)
+                    if (
+                        response.status_code == 403
+                        and not _refresh_attempted
+                        and self._should_auto_refresh_keys()
+                    ):
+                        try:
+                            body = response.json()
+                            if body.get("reason") == "accessDenied.invalidIp":
+                                if await self._refresh_token():
+                                    return await self.make_request(
+                                        endpoint,
+                                        params,
+                                        use_dynamic_model,
+                                        _refresh_attempted=True,
+                                    )
+                        except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
+                            pass
+
                     # Handle HTTP errors
                     error_response = self._handle_http_error(
                         response.status_code, attempt
@@ -292,6 +372,7 @@ class AsyncCocApiCore:
         json_body: dict[str, Any],
         params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
+        _refresh_attempted: bool = False,
     ) -> dict[str, Any]:
         """
         Make an async POST API request
@@ -307,18 +388,18 @@ class AsyncCocApiCore:
         """
         start_time = time.time()
 
-        # Build URL
-        url = build_url(self.config.base_url, endpoint, params)
-
         # Apply rate limiting
         if self._rate_limiter:
             await self._rate_limiter.acquire()
 
-        # Apply request middleware
+        # Apply request middleware before building URL so middleware can modify params
         headers = self.headers.copy()
-        url, headers, params = self.middleware.apply_request_middleware(
-            url, headers, params or {}
+        url_base = build_url(self.config.base_url, endpoint, None)
+        url_base, headers, params = self.middleware.apply_request_middleware(
+            url_base, headers, params or {}
         )
+        # Rebuild URL with (potentially modified) params
+        url = build_url(self.config.base_url, endpoint, params or None)
 
         # Make the request with retries
         for attempt in range(self.config.max_retries):
@@ -369,6 +450,27 @@ class AsyncCocApiCore:
                     return json_response
 
                 else:
+                    # Auto-refresh on accessDenied.invalidIp (once only)
+                    if (
+                        response.status_code == 403
+                        and not _refresh_attempted
+                        and self._should_auto_refresh_keys()
+                    ):
+                        try:
+                            body = response.json()
+                            if body.get("reason") == "accessDenied.invalidIp":
+                                if await self._refresh_token():
+                                    return await self.make_post_request(
+                                        endpoint,
+                                        json_body,
+                                        params,
+                                        use_dynamic_model,
+                                        _refresh_attempted=True,
+                                    )
+                        except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
+                            pass
+
                     error_response = self._handle_http_error(
                         response.status_code, attempt
                     )
@@ -450,7 +552,7 @@ class AsyncCocApiCore:
         error_response = {
             "result": "error",
             "message": error_messages.get(status, f"HTTP error {status}"),
-            "status_code": status,
+            "http_status": status,
             "error_type": "http",
         }
 

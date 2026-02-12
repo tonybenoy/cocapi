@@ -1,7 +1,7 @@
 [project]
 name = "cocapi"
-version = "3.1.0"
-description = "A python wrapper around clash of clans api"
+version = "4.0.0"
+description = "Async & sync Python wrapper for the Clash of Clans API with auto key management"
 readme = "README.md"
 authors = [{ name = "Tony Benoy", email = "me@tonybenoy.com" }]
 license = { text = "GPL-3.0" }
@@ -15,12 +15,30 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment :: Real Time Strategy",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: AsyncIO",
+    "Typing :: Typed",
 ]
-keywords = ["clash", "clans", "api", "wrapper", "supercell"]
+keywords = [
+    "clash-of-clans",
+    "clash",
+    "clans",
+    "coc",
+    "coc-api",
+    "supercell",
+    "api-wrapper",
+    "async",
+    "game-api",
+]
 dependencies = ["httpx>=0.23.0"]
 
 [project.optional-dependencies]
 pydantic = ["pydantic>=2.0.0"]
+cli = ["typer>=0.9.0"]
+
+[project.scripts]
+cocapi = "cocapi.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/tonybenoy/cocapi"
@@ -31,7 +49,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-exclude = ["scripts/"]
+exclude = ["scripts/", "examples/", "tests/", ".cocapi/"]
 [tool.ruff]
 line-length = 88
 target-version = "py310"

@@ -2,6 +2,7 @@
 Main CocApi client - simplified and modular version
 """
 
+import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -19,6 +20,8 @@ from .middleware import MiddlewareManager
 from .models import create_dynamic_model
 from .utils import (
     build_url,
+    extract_after_cursor,
+    extract_items,
     is_successful_response,
     should_retry_error,
     validate_params,
@@ -79,6 +82,11 @@ class CocApi(ApiMethods):
         # Async core for async operations
         self._async_core: AsyncCocApiCore | None = None
 
+        # Key manager state (set by from_credentials())
+        self._km_email: str | None = None
+        self._km_password: str | None = None
+        self._km_tokens: list[str] = []
+
         self.DEFAULT_PARAMS = ("limit", "after", "before")
         self.ERROR_INVALID_PARAM = {
             "result": "error",
@@ -93,6 +101,99 @@ class CocApi(ApiMethods):
                     f"API initialization failed: {test_response.get('message')}"
                 )
 
+    @classmethod
+    def from_credentials(
+        cls,
+        email: str,
+        password: str,
+        timeout: int = 20,
+        status_code: bool = False,
+        config: ApiConfig | None = None,
+    ) -> "CocApi":
+        """
+        Create a CocApi instance using SuperCell developer portal credentials.
+
+        Instead of providing a raw API token, provide your developer portal
+        email and password. Keys are automatically created and managed
+        based on your current public IP.
+
+        Args:
+            email: SuperCell developer portal email
+            password: SuperCell developer portal password
+            timeout: Request timeout in seconds
+            status_code: Include status code in responses
+            config: Optional ApiConfig for advanced settings
+
+        Returns:
+            Configured CocApi instance with a managed API token
+
+        Example::
+
+            api = CocApi.from_credentials("email@example.com", "password")
+            clan = api.clan_tag("#CLAN_TAG")
+        """
+        from .key_manager import SyncKeyManager
+
+        config = config or ApiConfig(timeout=timeout)
+
+        with SyncKeyManager(
+            email=email,
+            password=password,
+            key_name=config.key_name,
+            key_count=config.key_count,
+            key_description=config.key_description,
+            persist_keys=config.persist_keys,
+            key_storage_path=config.key_storage_path,
+        ) as km:
+            tokens = km.manage_keys()
+
+        instance = cls(
+            token=tokens[0],
+            timeout=timeout,
+            status_code=status_code,
+            config=config,
+        )
+        instance._km_email = email
+        instance._km_password = password
+        instance._km_tokens = tokens
+        return instance
+
+    def _should_auto_refresh_keys(self) -> bool:
+        """Check if auto key refresh is available and enabled."""
+        return self._km_email is not None and self.config.auto_refresh_keys
+
+    def _refresh_token(self) -> bool:
+        """
+        Refresh API token via KeyManager. Returns True if successful.
+
+        Re-detects IP, revokes stale keys, creates new ones as needed.
+        """
+        from .key_manager import SyncKeyManager
+
+        try:
+            with SyncKeyManager(
+                email=self._km_email,  # type: ignore[arg-type]
+                password=self._km_password,  # type: ignore[arg-type]
+                key_name=self.config.key_name,
+                key_count=self.config.key_count,
+                key_description=self.config.key_description,
+                persist_keys=self.config.persist_keys,
+                key_storage_path=self.config.key_storage_path,
+            ) as km:
+                tokens = km.refresh_keys()
+
+            if tokens:
+                self.token = tokens[0]
+                self._km_tokens = tokens
+                self.headers["authorization"] = f"Bearer {self.token}"
+                self.cache.clear()
+                logging.info("API token refreshed via KeyManager")
+                return True
+        except Exception as e:
+            logging.warning("Token refresh failed: %s", e)
+
+        return False
+
     # Async Context Manager Support
     async def __aenter__(self) -> "CocApi":
         """Async context manager entry - enables async mode automatically"""
@@ -101,6 +202,18 @@ class CocApi(ApiMethods):
 
         self._async_core = AsyncCocApiCore(self.token, self.config)
         await self._async_core.__aenter__()
+
+        # Propagate key manager state for auto-refresh
+        if self._km_email is not None:
+            self._async_core.set_key_manager_state(
+                email=self._km_email,
+                password=self._km_password,  # type: ignore[arg-type]
+                key_name=self.config.key_name,
+                key_count=self.config.key_count,
+                auto_refresh=self.config.auto_refresh_keys,
+                persist_keys=self.config.persist_keys,
+                key_storage_path=self.config.key_storage_path,
+            )
 
         # Test API connection in async mode
         test_response = await self._async_core.test_connection()
@@ -147,6 +260,7 @@ class CocApi(ApiMethods):
         uri: str,
         params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
+        _refresh_attempted: bool = False,
     ) -> dict[str, Any]:
         """Synchronous API response handling"""
         start_time = time.time()
@@ -238,6 +352,26 @@ class CocApi(ApiMethods):
                     return self._add_status_code(json_response, response.status_code)
 
                 else:
+                    # Auto-refresh on accessDenied.invalidIp (once only)
+                    if (
+                        response.status_code == 403
+                        and not _refresh_attempted
+                        and self._should_auto_refresh_keys()
+                    ):
+                        try:
+                            body = response.json()
+                            if body.get("reason") == "accessDenied.invalidIp":
+                                if self._refresh_token():
+                                    return self._sync_api_response(
+                                        uri,
+                                        params,
+                                        use_dynamic_model,
+                                        _refresh_attempted=True,
+                                    )
+                        except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
+                            pass
+
                     # Handle HTTP errors
                     error_response = self._handle_http_error(
                         response.status_code, attempt
@@ -316,7 +450,7 @@ class CocApi(ApiMethods):
         self, response: dict[str, Any], status_code: int
     ) -> dict[str, Any]:
         """Add status code to response if requested (backward compatibility)"""
-        if self.status_code:
+        if self.status_code and isinstance(response, dict):
             response["status_code"] = status_code
         return response
 
@@ -422,18 +556,19 @@ class CocApi(ApiMethods):
         json_body: dict[str, Any],
         params: dict[str, Any] | None = None,
         use_dynamic_model: bool = False,
+        _refresh_attempted: bool = False,
     ) -> dict[str, Any]:
         """Synchronous POST API response handling"""
         start_time = time.time()
 
-        # Build URL
-        url = build_url(self.config.base_url, uri, params)
-
-        # Apply request middleware
+        # Apply request middleware before building URL so middleware can modify params
         headers = self.headers.copy()
-        url, headers, request_params = self.middleware.apply_request_middleware(
-            url, headers, params or {}
+        url_base = build_url(self.config.base_url, uri, None)
+        url_base, headers, request_params = self.middleware.apply_request_middleware(
+            url_base, headers, params or {}
         )
+        # Rebuild URL with (potentially modified) params
+        url = build_url(self.config.base_url, uri, request_params or None)
 
         # Make the request with retries
         for attempt in range(self.config.max_retries):
@@ -483,6 +618,27 @@ class CocApi(ApiMethods):
                     return self._add_status_code(json_response, response.status_code)
 
                 else:
+                    # Auto-refresh on accessDenied.invalidIp (once only)
+                    if (
+                        response.status_code == 403
+                        and not _refresh_attempted
+                        and self._should_auto_refresh_keys()
+                    ):
+                        try:
+                            body = response.json()
+                            if body.get("reason") == "accessDenied.invalidIp":
+                                if self._refresh_token():
+                                    return self._sync_api_post_response(
+                                        uri,
+                                        json_body,
+                                        params,
+                                        use_dynamic_model,
+                                        _refresh_attempted=True,
+                                    )
+                        except Exception:
+                            # Auto-refresh is best-effort; fall through to normal error handling
+                            pass
+
                     error_response = self._handle_http_error(
                         response.status_code, attempt
                     )
@@ -617,6 +773,143 @@ class CocApi(ApiMethods):
                 }
             return response
         return response
+
+    # Pagination
+    def paginate(
+        self,
+        method: Callable[..., Any],
+        *args: Any,
+        limit: int = 100,
+    ) -> Any:
+        """Auto-paginate through all results from a list endpoint.
+
+        Yields individual items from each page, automatically following
+        the ``after`` cursor until all pages are exhausted.
+
+        Args:
+            method: An API method that returns paginated results
+                    (e.g. ``api.clan_members``).
+            *args:  Positional arguments for the method **excluding** the
+                    ``params`` dict (e.g. the clan tag).
+            limit:  Items per page (default 100).
+
+        Returns:
+            Generator (sync) or async generator (async) of individual items.
+
+        Example::
+
+            for member in api.paginate(api.clan_members, "#TAG"):
+                print(member["name"])
+        """
+        if self.async_mode:
+            return self._apaginate(method, *args, limit=limit)
+        return self._paginate(method, *args, limit=limit)
+
+    def _paginate(
+        self,
+        method: Callable[..., Any],
+        *args: Any,
+        limit: int = 100,
+    ) -> Any:
+        """Synchronous pagination generator."""
+        params: dict[str, Any] = {"limit": limit}
+        while True:
+            result = method(*args, params=params)
+            items = extract_items(result)
+            if not items:
+                break
+            yield from items
+            after = extract_after_cursor(result)
+            if not after:
+                break
+            params = {"limit": limit, "after": after}
+
+    async def _apaginate(
+        self,
+        method: Callable[..., Any],
+        *args: Any,
+        limit: int = 100,
+    ) -> Any:
+        """Asynchronous pagination generator."""
+        params: dict[str, Any] = {"limit": limit}
+        while True:
+            result = await method(*args, params=params)
+            items = extract_items(result)
+            if not items:
+                break
+            for item in items:
+                yield item
+            after = extract_after_cursor(result)
+            if not after:
+                break
+            params = {"limit": limit, "after": after}
+
+    # Batch fetch
+    def batch(
+        self,
+        method: Callable[..., Any],
+        args_list: list[Any],
+        max_concurrent: int | None = None,
+    ) -> list[dict[str, Any]] | Awaitable[list[dict[str, Any]]]:
+        """Fetch multiple resources in one call.
+
+        Args:
+            method:         An API method (e.g. ``api.players``).
+            args_list:      List of arguments — each element is passed to
+                            *method*.  Use tuples for methods that take
+                            multiple positional args.
+            max_concurrent: Limit concurrent requests in async mode
+                            (ignored in sync mode).
+
+        Returns:
+            List of response dicts (sync) or awaitable list (async).
+            Failed calls return their error dict in-place.
+
+        Example::
+
+            results = api.batch(api.players, ["#TAG1", "#TAG2", "#TAG3"])
+        """
+        if self.async_mode:
+            return self._abatch(method, args_list, max_concurrent)
+        return self._batch(method, args_list)
+
+    def _batch(
+        self,
+        method: Callable[..., Any],
+        args_list: list[Any],
+    ) -> list[dict[str, Any]]:
+        """Synchronous batch — sequential calls."""
+        results: list[dict[str, Any]] = []
+        for args in args_list:
+            if isinstance(args, (list, tuple)):
+                results.append(method(*args))
+            else:
+                results.append(method(args))
+        return results
+
+    async def _abatch(
+        self,
+        method: Callable[..., Any],
+        args_list: list[Any],
+        max_concurrent: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Asynchronous batch — concurrent calls with optional semaphore."""
+
+        async def _call(args: Any) -> dict[str, Any]:
+            if isinstance(args, (list, tuple)):
+                return await method(*args)
+            return await method(args)
+
+        if max_concurrent:
+            sem = asyncio.Semaphore(max_concurrent)
+
+            async def _limited(args: Any) -> dict[str, Any]:
+                async with sem:
+                    return await _call(args)
+
+            return list(await asyncio.gather(*[_limited(a) for a in args_list]))
+
+        return list(await asyncio.gather(*[_call(a) for a in args_list]))
 
     # V3.0.0 Enhanced Features
     def custom_endpoint(
