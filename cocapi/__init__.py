@@ -1,5 +1,5 @@
 """
-Clash of Clans API Wrapper - cocapi v3.1.0
+Clash of Clans API Wrapper - cocapi v4.0.0
 
 A Python wrapper for the official Clash of Clans API with enhanced features:
 - Async and sync support
@@ -48,6 +48,14 @@ from .client import CocApi
 
 # Configuration classes
 from .config import ApiConfig, CacheEntry, RequestMetric
+
+# Key management (credential-based auth)
+from .key_manager import (
+    AsyncKeyManager,
+    InvalidCredentials,
+    KeyManagerError,
+    SyncKeyManager,
+)
 from .metrics import MetricsTracker
 
 # Common middleware functions
@@ -115,7 +123,7 @@ except (ImportError, SyntaxError):
     _SCHEMAS_AVAILABLE = False
 
 # Version info
-__version__ = "3.1.0"
+__version__ = "4.0.0"
 __author__ = "Tony Benoy"
 __email__ = "me@tonybenoy.com"
 
@@ -131,6 +139,11 @@ __all__ = [
     "MetricsTracker",
     "MiddlewareManager",
     "AsyncRateLimiter",
+    # Key management
+    "SyncKeyManager",
+    "AsyncKeyManager",
+    "KeyManagerError",
+    "InvalidCredentials",
     # Data structures
     "CacheEntry",
     "RequestMetric",

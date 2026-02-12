@@ -5,401 +5,285 @@
     <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/v/cocapi" alt="Pypi version" height="21"></a>
 </p>
 <p>
-    <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.7+-blue.svg" alt="Python version" height="17"></a>
+    <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python version" height="17"></a>
     <a href="https://github.com/tonybenoy/cocapi/blob/master/LICENSE"><img src="https://img.shields.io/github/license/tonybenoy/cocapi" alt="License" height="17"></a>
     <a href="https://github.com/astral-sh/ruff">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff" height="17">
     </a>
 </p>
 
-# ClashOfClansAPI
+# cocapi
 
-A high-performance Python wrapper for SuperCell's Clash of Clans API with enterprise-grade features including async support, response caching, retry logic, middleware system, and comprehensive metrics.
+A Python wrapper for the official [Clash of Clans API](https://developer.clashofclans.com/) with full async support, automatic key management, caching, retries, and optional Pydantic models.
 
-**🎯 Complete API Coverage**: All official API endpoints implemented
-**⚡ High Performance**: Async support with intelligent caching and rate limiting  
-**🔄 100% Backward Compatible**: Drop-in replacement for existing code  
-**🛡️ Production Ready**: Retry logic, middleware pipeline, metrics tracking, and comprehensive error handling  
-**🚀 Future-Proof**: Custom endpoint support and dynamic Pydantic models
-
-Get Token from [https://developer.clashofclans.com/](https://developer.clashofclans.com/)
-
-## ✨ Key Features
-
-- **🔄 Sync & Async Support**: Same API works for both sync and async
-- **🚀 Custom Endpoints**: Future-proof with any new SuperCell endpoints  
-- **💾 Intelligent Caching**: Response caching with configurable TTL and statistics
-- **🔁 Smart Retry Logic**: Exponential backoff with configurable retry policies
-- **⚡ Rate Limiting**: Built-in protection against API rate limits (async mode)
-- **🛡️ Comprehensive Error Handling**: Detailed error messages and types
-- **📊 Metrics & Analytics**: Request performance tracking and insights
-- **🔌 Middleware System**: Pluggable request/response processing pipeline
-- **🎯 Type Safety**: Complete type hints and optional Pydantic models
-- **🌐 Base URL Configuration**: Support for proxies and testing environments
-- **🔄 100% Backward Compatible**: Drop-in replacement for existing code
-
-# Install
+## Install
 
 ```bash
-# Standard installation (dict responses)
 pip install cocapi
 
-# With optional Pydantic models support
+# With Pydantic model support
 pip install 'cocapi[pydantic]'
 ```
 
+Requires Python 3.10+.
 
-# Usage Examples
+## Quick Start
 
-## Basic Synchronous Usage (Backward Compatible)
+### With an API Token
+
+Get a token from [developer.clashofclans.com](https://developer.clashofclans.com/):
 
 ```python
 from cocapi import CocApi
 
-token = 'YOUR_API_TOKEN'
-timeout = 60  # requests timeout
+api = CocApi("your_api_token")
 
-# Basic initialization (same as before)
-api = CocApi(token, timeout)
+clan = api.clan_tag("#2PP")
+print(clan["name"])
 
-# With status codes (same as before)
-api = CocApi(token, timeout, status_code=True)
+player = api.players("#900PUCPV")
+print(player["trophies"])
 ```
 
-## Advanced Configuration
+### With Email/Password (Automatic Key Management)
+
+Skip manual key creation entirely. cocapi logs into the developer portal, detects your IP, and manages keys for you:
+
+```python
+from cocapi import CocApi
+
+api = CocApi.from_credentials("you@example.com", "your_password")
+clan = api.clan_tag("#2PP")
+```
+
+Keys are created automatically, reused when valid, and rotated when your IP changes. See [Authentication](#authentication) for details.
+
+### Async
+
+```python
+import asyncio
+from cocapi import CocApi
+
+async def main():
+    async with CocApi("your_token") as api:
+        clan = await api.clan_tag("#2PP")
+        player = await api.players("#900PUCPV")
+        print(clan["name"], player["trophies"])
+
+asyncio.run(main())
+```
+
+## Authentication
+
+cocapi supports two ways to authenticate:
+
+### 1. API Token
+
+Pass a token directly. You manage key creation and IP binding yourself at the developer portal.
+
+```python
+api = CocApi("your_token")
+```
+
+### 2. Developer Portal Credentials
+
+Provide your email and password. cocapi handles everything:
+
+```python
+api = CocApi.from_credentials("email", "password")
+```
+
+What happens automatically:
+- Logs into the developer portal and detects your public IP
+- Creates API keys bound to that IP (or reuses existing ones)
+- If your IP changes mid-session and the API returns 403, revokes the old key and creates a new one
+- Respects the 10-key-per-account SuperCell limit
+
+#### Configuration Options
 
 ```python
 from cocapi import CocApi, ApiConfig
 
-# Enterprise-grade configuration
 config = ApiConfig(
-    # Performance settings
+    key_count=2,               # Number of keys to maintain (default: 1)
+    key_name="my-bot",         # Key name on the portal (default: "cocapi_auto")
+    auto_refresh_keys=True,    # Auto-rotate on IP change (default: True)
+)
+api = CocApi.from_credentials("email", "password", config=config)
+```
+
+#### Persisting Keys Locally
+
+For scripts that run repeatedly, enable `persist_keys` to cache the token on disk. On the next run, if your IP hasn't changed, the cached token is reused without contacting the developer portal:
+
+```python
+config = ApiConfig(persist_keys=True)
+api = CocApi.from_credentials("email", "password", config=config)
+# First run:  logs in, creates key, saves to ~/.cocapi/keys.json
+# Next runs:  detects IP, matches cache, skips login entirely
+```
+
+Disabled by default. Storage path is customizable via `key_storage_path`.
+
+#### Standalone Key Manager
+
+Use `SyncKeyManager` or `AsyncKeyManager` directly if you need tokens outside of `CocApi`:
+
+```python
+from cocapi import SyncKeyManager
+
+with SyncKeyManager("email", "password", key_count=3) as km:
+    tokens = km.manage_keys()
+    print(f"Got {len(tokens)} token(s)")
+
+# Async version
+from cocapi import AsyncKeyManager
+
+async with AsyncKeyManager("email", "password") as km:
+    tokens = await km.manage_keys()
+```
+
+## Configuration
+
+All options are set through `ApiConfig`:
+
+```python
+from cocapi import CocApi, ApiConfig
+
+config = ApiConfig(
+    # Request settings
     timeout=30,
-    max_retries=5,
-    retry_delay=1.5,  # Base delay for exponential backoff
-    
-    # Caching configuration  
+    max_retries=3,
+    retry_delay=1.0,           # Base delay for exponential backoff
+
+    # Caching
     enable_caching=True,
-    cache_ttl=600,  # Cache responses for 10 minutes
-    
-    # Async rate limiting (async mode only)
+    cache_ttl=600,             # Seconds (default: 300)
+
+    # Rate limiting (async only)
     enable_rate_limiting=True,
     requests_per_second=10.0,
     burst_limit=20,
-    
-    # Advanced features
+
+    # Metrics
     enable_metrics=True,
-    metrics_window_size=1000,  # Track last 1000 requests
-    use_pydantic_models=False  # Enable for type-safe models
+    metrics_window_size=1000,
+
+    # Pydantic models (requires cocapi[pydantic])
+    use_pydantic_models=True,
 )
 
-api = CocApi('YOUR_API_TOKEN', config=config)
+api = CocApi("your_token", config=config)
 
-# Management methods
-cache_stats = api.get_cache_stats()
-metrics = api.get_metrics()
+# Runtime management
+api.get_cache_stats()
+api.get_metrics()
 api.clear_cache()
 api.clear_metrics()
 ```
 
-## Asynchronous Usage
+### Middleware
 
-```python
-import asyncio
-from cocapi import CocApi, ApiConfig
-
-async def main():
-    # Method 1: Automatic async mode with context manager (recommended)
-    async with CocApi('YOUR_API_TOKEN') as api:
-        clan = await api.clan_tag('#CLAN_TAG')
-        player = await api.players('#PLAYER_TAG')
-    
-    # Method 2: Explicit async mode
-    api = CocApi('YOUR_API_TOKEN', async_mode=True)
-    async with api:
-        clan = await api.clan_tag('#CLAN_TAG')
-    
-    # Method 3: With custom configuration
-    config = ApiConfig(timeout=30, enable_caching=True)
-    async with CocApi('YOUR_API_TOKEN', config=config) as api:
-        clan = await api.clan_tag('#CLAN_TAG')
-
-# Run async code
-asyncio.run(main())
-```
-
-## 🚀 Enterprise Features
-
-### 📊 Metrics & Analytics
-
-```python
-from cocapi import CocApi, ApiConfig
-
-# Enable metrics tracking
-config = ApiConfig(enable_metrics=True, metrics_window_size=1000)
-api = CocApi('YOUR_TOKEN', config=config)
-
-# Get comprehensive metrics after API calls
-metrics = api.get_metrics()
-print(f"Total requests: {metrics['total_requests']}")
-print(f"Average response time: {metrics['avg_response_time']:.2f}ms")
-print(f"Cache hit rate: {metrics['cache_hit_rate']:.1%}")
-print(f"Error rate: {metrics['error_rate']:.1%}")
-```
-
-### 🔌 Middleware System
+Add custom processing to requests and responses:
 
 ```python
 from cocapi import CocApi
 from cocapi.middleware import add_user_agent_middleware, add_request_id_middleware
 
-api = CocApi('YOUR_TOKEN')
-
-# Add built-in middleware
+api = CocApi("your_token")
 api.add_request_middleware(add_user_agent_middleware("MyApp/1.0"))
 api.add_request_middleware(add_request_id_middleware())
 
 # Custom middleware
-def add_custom_headers(url, headers, params):
-    headers['X-Client-Version'] = '3.0.0'
+def add_custom_header(url, headers, params):
+    headers["X-My-Header"] = "value"
     return url, headers, params
 
-api.add_request_middleware(add_custom_headers)
+api.add_request_middleware(add_custom_header)
 ```
 
-### 🎯 Enhanced Caching
+### Custom Endpoints
+
+Call new SuperCell endpoints without waiting for a library update:
 
 ```python
-from cocapi import CocApi, ApiConfig
+result = api.custom_endpoint("/new-endpoint")
+result = api.custom_endpoint("/clans/search", {"name": "clash", "limit": 10})
 
-config = ApiConfig(enable_caching=True, cache_ttl=900)  # 15 minutes
-api = CocApi('YOUR_TOKEN', config=config)
-
-# Requests are cached automatically
-clan1 = api.clan_tag('#CLAN_TAG')  # Cache miss
-clan2 = api.clan_tag('#CLAN_TAG')  # Cache hit
-
-# Cache statistics and management
-stats = api.get_cache_stats()
-api.clear_cache()
+# With dynamic Pydantic model
+result = api.custom_endpoint("/new-endpoint", use_dynamic_model=True)
 ```
 
-### ⚡ Async Rate Limiting
+### Base URL Override
+
+For proxies or testing environments:
 
 ```python
-from cocapi import CocApi, ApiConfig
-import asyncio
-
-async def high_throughput_example():
-    config = ApiConfig(
-        enable_rate_limiting=True,
-        requests_per_second=10.0,
-        burst_limit=20
-    )
-    
-    async with CocApi('YOUR_TOKEN', config=config) as api:
-        # Concurrent requests with automatic rate limiting
-        clan_tags = ['#CLAN1', '#CLAN2', '#CLAN3']
-        tasks = [api.clan_tag(tag) for tag in clan_tags]
-        results = await asyncio.gather(*tasks)
-
-asyncio.run(high_throughput_example())
-```
-
-## Pydantic Models (Optional)
-
-For enhanced type safety and structured data validation, cocapi supports optional Pydantic models:
-
-```python
-from cocapi import CocApi, ApiConfig, Clan, Player
-
-# Enable Pydantic models
-config = ApiConfig(use_pydantic_models=True)
-api = CocApi('YOUR_API_TOKEN', config=config)
-
-# Get structured clan data
-clan = api.clan_tag('#2PP')  # Returns Clan model instead of dict
-print(clan.name)             # Type-safe attribute access
-print(clan.clanLevel)        # IDE autocompletion support
-print(clan.members)          # Validated data structure
-
-# Get structured player data
-player = api.players('#PLAYER_TAG')  # Returns Player model
-print(player.townHallLevel)         # Type-safe attributes
-print(player.trophies)
-print(player.clan.name if player.clan else "No clan")
-
-# Works with async too
-async def get_data():
-    config = ApiConfig(use_pydantic_models=True)
-    async with CocApi('YOUR_TOKEN', config=config) as api:
-        clan = await api.clan_tag('#TAG')  # Returns Clan model
-        return clan.name
-
-# Available models: Clan, Player, ClanMember, League, Achievement, etc.
-# Import them: from cocapi import Clan, Player, ClanMember
-```
-
-### Benefits of Pydantic Models
-
-- **Type Safety**: Catch errors at development time
-- **IDE Support**: Full autocompletion and type hints
-- **Data Validation**: Automatic validation of API responses  
-- **Clean Interface**: Object-oriented access to data
-- **Documentation**: Self-documenting code with model schemas
-- **Optional**: Zero impact if not used (lazy imports)
-
-## Custom Endpoints 🚀
-
-Use any new SuperCell endpoints immediately without waiting for library updates:
-
-```python
-from cocapi import CocApi
-
-api = CocApi('YOUR_API_TOKEN')
-
-# Call new endpoints directly
-result = api.custom_endpoint('/new-endpoint')
-result = api.custom_endpoint('/clans/search', {'name': 'my clan', 'limit': 10})
-
-# With dynamic Pydantic models
-result = api.custom_endpoint('/new-endpoint', use_dynamic_model=True)
-print(result.some_field)  # Type-safe access
-
-# Async support
-async with CocApi('YOUR_TOKEN') as api:
-    result = await api.custom_endpoint('/new-endpoint')
-```
-
-## Base URL Configuration 🌐
-
-Modify base URL for testing, proxying, or adapting to API changes:
-
-```python
-from cocapi import CocApi, ApiConfig
-
-api = CocApi('YOUR_TOKEN')
-
-# Change base URL (requires force=True for safety)
-api.set_base_url("https://api-staging.example.com/v1", force=True)
-
-# Or set during initialization
 config = ApiConfig(base_url="https://my-proxy.com/clash/v1")
-api = CocApi('YOUR_TOKEN', config=config)
+api = CocApi("token", config=config)
 
-# Reset to official endpoint
+# Or at runtime
+api.set_base_url("https://staging.example.com/v1", force=True)
 api.reset_base_url()
 ```
 
-## 📈 Performance Benefits
+## Pagination
 
-### Key Improvements
-- **⚡ Intelligent Caching**: Up to 100% faster for repeated requests
-- **🚀 Async Operations**: Handle dozens of concurrent requests efficiently
-- **🔁 Smart Retry Logic**: Exponential backoff with configurable policies
-- **📈 Monitoring**: Track error rates, response times, and cache performance
-
-### Example Setup
-```python
-# High-performance configuration
-config = ApiConfig(
-    enable_caching=True,
-    enable_metrics=True,
-    max_retries=3
-)
-
-api = CocApi('token', config=config)
-
-# Async mode with concurrency
-async with CocApi('token', config=config) as api:
-    clans = await asyncio.gather(*[
-        api.clan_tag(tag) for tag in clan_tags
-    ])
-```
-
-## Migration Guide 
-
-### 🔄 Upgrading to v3.0.0 - Zero Breaking Changes!
-
-cocapi 3.0.0 maintains 100% backward compatibility. Your existing code continues to work unchanged:
+Endpoints that return lists (clan members, rankings, leagues, etc.) use cursor-based pagination. The `paginate()` helper auto-follows cursors and yields items one by one:
 
 ```python
-# All existing patterns still work
-from cocapi import CocApi
+# Iterate through all clan members
+for member in api.paginate(api.clan_members, "#CLAN_TAG"):
+    print(member["name"])
 
-api = CocApi('YOUR_TOKEN')  # ✅ Works
-api = CocApi('YOUR_TOKEN', 60, True)  # ✅ Works
-clan = api.clan_tag('#CLAN_TAG')  # ✅ Works
-
-# To use new features, just add configuration:
-config = ApiConfig(enable_caching=True, cache_ttl=300)
-api = CocApi('YOUR_TOKEN', config=config)
+# Custom page size
+for clan in api.paginate(api.location_id_clan_rank, "32000087", limit=50):
+    print(clan["name"])
 ```
 
-## 🚀 What's New in v3.0.0
+Pass the method reference and its arguments (excluding the `params` dict). The helper manages `limit` and `after` internally.
 
-**Major enterprise features** while maintaining 100% backward compatibility:
+Works with async too:
 
-- **📊 Enterprise Metrics**: Comprehensive API performance monitoring
-- **🔌 Middleware System**: Pluggable request/response processing  
-- **⚡ Enhanced Async**: Rate limiting and improved concurrency
-- **🚀 Custom Endpoints**: Future-proof support for new SuperCell endpoints
-- **🎯 Type Safety**: Enhanced type hints and Pydantic model integration
-- **🌐 Base URL Config**: Support for staging environments and proxies
-
-### Installation
-```bash
-pip install --upgrade cocapi
-# Or with Pydantic support:
-pip install --upgrade 'cocapi[pydantic]'
+```python
+async with CocApi("token") as api:
+    async for member in api.paginate(api.clan_members, "#CLAN_TAG"):
+        print(member["name"])
 ```
 
-## Previous Releases
+Works with any list endpoint: `clan_members`, `clan_war_log`, `clan_capitalraidseasons`, `location`, `location_id_clan_rank`, `location_id_player_rank`, `league`, `league_season`, `league_season_id`, `labels_clans`, `labels_players`, `capitalleagues`, `builderbaseleagues`, `leaguetiers`, and all other ranking/listing endpoints.
 
-**v2.2.x**: Pydantic models, enhanced type safety, async + Pydantic support  
-**v2.1.x**: Unified async support, intelligent caching, retry logic, enhanced configuration
+> **Note**: `clan()` search has a special signature and should be paginated manually using the `params` dict if needed.
 
-## Full API Reference
+## API Reference
 
-All methods work identically in both sync and async modes - just use `await` when in async context!
+All methods work in both sync and async mode. In async, use `await`. Pagination parameters (`limit`, `after`, `before`) can be passed as a dict.
 
 ---
 
-## Clans
+### Clans
 
-### Information about a Clan
+#### Clan Info
 ```python
-api.clan_tag(tag) #example tag "#2PP"
+api.clan_tag(tag)  # e.g. "#2PP"
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
+```json
 {
   "tag": "string",
   "name": "string",
   "type": "string",
   "description": "string",
-  "location": {
-    "id": 0,
-    "name": "string",
-    "isCountry": true,
-    "countryCode": "string"
-  },
+  "location": {"id": 0, "name": "string", "isCountry": true, "countryCode": "string"},
   "isFamilyFriendly": true,
-  "badgeUrls": {
-    "small": "string",
-    "large": "string",
-    "medium": "string"
-  },
+  "badgeUrls": {"small": "string", "large": "string", "medium": "string"},
   "clanLevel": 0,
   "clanPoints": 0,
   "clanBuilderBasePoints": 0,
   "clanCapitalPoints": 0,
-  "capitalLeague": {
-    "id": 0,
-    "name": "string"
-  },
+  "capitalLeague": {"id": 0, "name": "string"},
   "requiredTrophies": 0,
   "requiredBuilderBaseTrophies": 0,
   "requiredTownhallLevel": 0,
@@ -407,317 +291,98 @@ api.clan_tag(tag) #example tag "#2PP"
   "warWinStreak": 0,
   "warWins": 0,
   "isWarLogPublic": true,
-  "warLeague": {
-    "id": 0,
-    "name": "string"
-  },
+  "warLeague": {"id": 0, "name": "string"},
   "members": 0,
-  "memberList": [
-    {
-      "tag": "string",
-      "name": "string",
-      "role": "string",
-      "townHallLevel": 0,
-      "expLevel": 0,
-      "league": {
-        "id": 0,
-        "name": "string",
-        "iconUrls": {}
-      },
-      "leagueTier": {
-        "id": 0,
-        "name": "string",
-        "iconUrls": {}
-      },
-      "trophies": 0,
-      "builderBaseTrophies": 0,
-      "clanRank": 0,
-      "previousClanRank": 0,
-      "donations": 0,
-      "donationsReceived": 0,
-      "playerHouse": {
-        "elements": []
-      },
-      "builderBaseLeague": {
-        "id": 0,
-        "name": "string"
-      }
-    }
-  ],
-  "labels": [
-    {
-      "id": 0,
-      "name": "string",
-      "iconUrls": {}
-    }
-  ],
-  "clanCapital": {
-    "capitalHallLevel": 0,
-    "districts": []
-  },
-  "chatLanguage": {
-    "id": 0,
-    "name": "string",
-    "languageCode": "string"
-  }
+  "memberList": [{"tag": "string", "name": "string", "role": "string", "townHallLevel": 0, "expLevel": 0, "trophies": 0, "clanRank": 0, "donations": 0, "donationsReceived": 0}],
+  "labels": [{"id": 0, "name": "string", "iconUrls": {}}],
+  "clanCapital": {"capitalHallLevel": 0, "districts": []},
+  "chatLanguage": {"id": 0, "name": "string", "languageCode": "string"}
 }
 ```
 </details>
 
-#### Members Only
+#### Clan Members
 ```python
 api.clan_members(tag)
+api.clan_members(tag, {"limit": 20})
 ```
-Returns clan member list under "items" in dict
 
-### Search Clans
+#### Search Clans
 ```python
-# Basic search by name
-api.clan(name="MyClans", limit=10)
+api.clan("clash", 10)
 
-# Advanced search with filters
+# With filters
 api.clan(
-    name="War",
-    limit=20,
+    "war", 20,
     war_frequency="always",
     location_id=32000006,
     min_members=30,
     max_members=50,
     min_clan_points=20000,
     min_clan_level=10,
-    label_ids="56000000,56000001"
+    label_ids="56000000,56000001",
 )
-
-# With pagination
-api.clan(name="MyClans", params={"after": "cursor_token"})
 ```
-Search all clans by name and/or filtering criteria. Name must be at least 3 characters long if used.
 
-### War Log Information
+#### War Log
 ```python
 api.clan_war_log(tag)
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "result": "string",
-    "endTime": "string",
-    "teamSize": 0,
-    "attacksPerMember": 0,
-    "battleModifier": "string",
-    "clan": {
-      "tag": "string",
-      "name": "string",
-      "badgeUrls": {},
-      "clanLevel": 0,
-      "attacks": 0,
-      "stars": 0,
-      "destructionPercentage": 0.0,
-      "expEarned": 0
-    },
-    "opponent": {
-      "tag": "string",
-      "name": "string",
-      "badgeUrls": {},
-      "clanLevel": 0,
-      "stars": 0,
-      "destructionPercentage": 0.0
-    }
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"result": "string", "endTime": "string", "teamSize": 0, "attacksPerMember": 0, "clan": {"tag": "string", "name": "string", "stars": 0, "destructionPercentage": 0.0}, "opponent": {"tag": "string", "name": "string", "stars": 0, "destructionPercentage": 0.0}}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Current War Information
+#### Current War
 ```python
 api.clan_current_war(tag)
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{
-  "state": "string",
-  "teamSize": 0,
-  "attacksPerMember": 0,
-  "battleModifier": "string",
-  "preparationStartTime": "string",
-  "startTime": "string",
-  "endTime": "string",
-  "clan": {
-    "tag": "string",
-    "name": "string",
-    "badgeUrls": {},
-    "clanLevel": 0,
-    "attacks": 0,
-    "stars": 0,
-    "destructionPercentage": 0.0,
-    "members": [
-      {
-        "tag": "string",
-        "name": "string",
-        "townhallLevel": 0,
-        "mapPosition": 0,
-        "opponentAttacks": 0,
-        "bestOpponentAttack": {
-          "order": 0,
-          "attackerTag": "string",
-          "defenderTag": "string",
-          "stars": 0,
-          "destructionPercentage": 0
-        },
-        "attacks": [
-          {
-            "order": 0,
-            "attackerTag": "string",
-            "defenderTag": "string",
-            "stars": 0,
-            "destructionPercentage": 0
-          }
-        ]
-      }
-    ]
-  },
-  "opponent": {
-    "tag": "string",
-    "name": "string",
-    "badgeUrls": {},
-    "clanLevel": 0,
-    "attacks": 0,
-    "stars": 0,
-    "destructionPercentage": 0.0,
-    "members": []
-  }
-}
+```json
+{"state": "string", "teamSize": 0, "preparationStartTime": "string", "startTime": "string", "endTime": "string", "clan": {"tag": "string", "name": "string", "clanLevel": 0, "attacks": 0, "stars": 0, "destructionPercentage": 0.0, "members": [{"tag": "string", "name": "string", "townhallLevel": 0, "mapPosition": 0, "attacks": [{"order": 0, "attackerTag": "string", "defenderTag": "string", "stars": 0, "destructionPercentage": 0}]}]}, "opponent": {"tag": "string", "name": "string", "clanLevel": 0, "members": []}}
 ```
 </details>
 
-### Clan League Group Information
+#### Clan War League Group
 ```python
 api.clan_leaguegroup(tag)
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{
-  "tag": "string",
-  "state": "string",
-  "season": "string",
-  "clans": [
-    {
-      "tag": "string",
-      "clanLevel": 0,
-      "name": "string",
-      "members": [
-        {
-          "tag": "string",
-          "townHallLevel": 0,
-          "name": "string"
-        }
-      ],
-      "badgeUrls": {}
-    }
-  ],
-  "rounds": [
-    {
-      "warTags": [
-        "string"
-      ]
-    }
-  ]
-}
+```json
+{"tag": "string", "state": "string", "season": "string", "clans": [{"tag": "string", "clanLevel": 0, "name": "string", "members": [{"tag": "string", "townHallLevel": 0, "name": "string"}], "badgeUrls": {}}], "rounds": [{"warTags": ["string"]}]}
 ```
 </details>
 
-### Clan Capital Raid Seasons
+#### Capital Raid Seasons
 ```python
 api.clan_capitalraidseasons(tag)
+api.clan_capitalraidseasons(tag, {"limit": 5})
 ```
-Retrieve clan's capital raid seasons information
-<details>
- <summary>Click to view output</summary>
 
-```text
-{"items":
-[
-  {
-    "state": "string",
-    "startTime": "string",
-    "endTime": "string",
-    "capitalTotalLoot": 0,
-    "raidsCompleted": 0,
-    "totalAttacks": 0,
-    "enemyDistrictsDestroyed": 0,
-    "offensiveReward": 0,
-    "defensiveReward": 0,
-    "members": [],
-    "attackLog": [],
-    "defenseLog": []
-  }
-],
-"paging": {"cursors": {}}
-}
-```
-</details>
-
-### Warleague Information
+#### CWL War by Tag
 ```python
 api.warleague(war_tag)
 ```
-<details>
- <summary>Click to view output</summary>
 
-```text
-{
-  "tag": "string",
-  "state": "string",
-  "season": "string",
-  "clans": [
-    {
-      "tag": "string",
-      "clanLevel": 0,
-      "name": "string",
-      "members": [
-        {
-          "tag": "string",
-          "townHallLevel": 0,
-          "name": "string"
-        }
-      ],
-      "badgeUrls": {}
-    }
-  ],
-  "rounds": [
-    {
-      "warTags": [
-        "string"
-      ]
-    }
-  ]
-}
-```
-</details>
+---
 
+### Players
 
-
-
-## Player
-
-### Player information
+#### Player Info
 ```python
-api.players(player_tag) #for example "#900PUCPV"
+api.players(player_tag)  # e.g. "#900PUCPV"
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
+```json
 {
   "tag": "string",
   "name": "string",
@@ -730,648 +395,313 @@ api.players(player_tag) #for example "#900PUCPV"
   "defenseWins": 0,
   "builderHallLevel": 0,
   "builderBaseTrophies": 0,
-  "bestBuilderBaseTrophies": 0,
   "role": "string",
   "warPreference": "string",
   "donations": 0,
   "donationsReceived": 0,
-  "clanCapitalContributions": 0,
-  "clan": {
-    "tag": "string",
-    "name": "string",
-    "clanLevel": 0,
-    "badgeUrls": {}
-  },
-  "leagueTier": {
-    "id": 0,
-    "name": "string",
-    "iconUrls": {}
-  },
-  "builderBaseLeague": {
-    "id": 0,
-    "name": "string"
-  },
-  "achievements": [
-    {
-      "name": "string",
-      "stars": 0,
-      "value": 0,
-      "target": 0,
-      "info": "string",
-      "completionInfo": "string",
-      "village": "string"
-    }
-  ],
-  "labels": [
-    {
-      "id": 0,
-      "name": "string",
-      "iconUrls": {}
-    }
-  ],
-  "troops": [
-    {
-      "name": "string",
-      "level": 0,
-      "maxLevel": 0,
-      "village": "string"
-    }
-  ],
-  "heroes": [
-    {
-      "name": "string",
-      "level": 0,
-      "maxLevel": 0,
-      "village": "string"
-    }
-  ],
+  "clan": {"tag": "string", "name": "string", "clanLevel": 0, "badgeUrls": {}},
+  "achievements": [{"name": "string", "stars": 0, "value": 0, "target": 0, "info": "string"}],
+  "troops": [{"name": "string", "level": 0, "maxLevel": 0, "village": "string"}],
+  "heroes": [{"name": "string", "level": 0, "maxLevel": 0, "village": "string"}],
   "heroEquipment": [],
-  "spells": [
-    {
-      "name": "string",
-      "level": 0,
-      "maxLevel": 0,
-      "village": "string"
-    }
-  ]
+  "spells": [{"name": "string", "level": 0, "maxLevel": 0, "village": "string"}]
 }
 ```
 </details>
 
-
-
-
-### Verify Player Token
+#### Verify Player Token
 ```python
 api.verify_player_token(player_tag, "player_api_token")
 ```
-Verify the API token found in the player's game settings to confirm account ownership.
-<details>
- <summary>Click to view output</summary>
+Returns `{"tag": "string", "token": "string", "status": "string"}`.
 
-```text
-{
-  "tag": "string",
-  "token": "string",
-  "status": "string"
-}
-```
-</details>
+---
 
+### Locations
 
-## Locations
-
-### All Locations Information
+#### All Locations
 ```python
 api.location()
+api.location({"limit": 10})
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string",
-    "isCountry": true,
-    "countryCode": "string"
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string", "isCountry": true, "countryCode": "string"}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Information for a Single Location
+#### Single Location
 ```python
-api.location_id(location_id) #for example "32000249"
+api.location_id("32000006")
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{
-  "id": 0,
-  "name": "string",
-  "isCountry": true,
-  "countryCode": "string"
-}
+```json
+{"id": 0, "name": "string", "isCountry": true, "countryCode": "string"}
 ```
 </details>
 
-### Top Clans in a Location
+#### Top Clans in a Location
 ```python
 api.location_id_clan_rank(location_id)
+api.location_id_clan_rank(location_id, {"limit": 10})
 ```
-Top clans in a given location
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "tag": "string",
-    "name": "string",
-    "location": {
-      "id": 0,
-      "name": "string",
-      "isCountry": true,
-      "countryCode": "string"
-    },
-    "badgeUrls": {},
-    "clanLevel": 0,
-    "members": 0,
-    "clanPoints": 0,
-    "rank": 0,
-    "previousRank": 0
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"tag": "string", "name": "string", "location": {"id": 0, "name": "string", "isCountry": true, "countryCode": "string"}, "badgeUrls": {}, "clanLevel": 0, "members": 0, "clanPoints": 0, "rank": 0, "previousRank": 0}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Top Players in a Location
+#### Top Players in a Location
 ```python
 api.location_id_player_rank(location_id)
 ```
-Top players in a given location
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "tag": "string",
-    "name": "string",
-    "expLevel": 0,
-    "trophies": 0,
-    "attackWins": 0,
-    "defenseWins": 0,
-    "rank": 0,
-    "previousRank": 0,
-    "clan": {
-      "tag": "string",
-      "name": "string",
-      "badgeUrls": {}
-    },
-    "league": {
-      "id": 0,
-      "name": "string",
-      "iconUrls": {}
-    },
-    "leagueTier": {
-      "id": 0,
-      "name": "string",
-      "iconUrls": {}
-    }
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"tag": "string", "name": "string", "expLevel": 0, "trophies": 0, "attackWins": 0, "defenseWins": 0, "rank": 0, "previousRank": 0, "clan": {"tag": "string", "name": "string", "badgeUrls": {}}, "league": {"id": 0, "name": "string", "iconUrls": {}}, "leagueTier": {"id": 0, "name": "string", "iconUrls": {}}}], "paging": {"cursors": {}}}
 ```
 </details>
 
-
-### Top Builder Base Clans in a Location
+#### Top Builder Base Clans in a Location
 ```python
 api.location_clans_builder_base(location_id)
 ```
-Top builder base clans in a given location
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "tag": "string",
-    "name": "string",
-    "location": {
-      "id": 0,
-      "name": "string",
-      "isCountry": true,
-      "countryCode": "string"
-    },
-    "badgeUrls": {},
-    "clanLevel": 0,
-    "members": 0,
-    "rank": 0,
-    "previousRank": 0,
-    "clanBuilderBasePoints": 0
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"tag": "string", "name": "string", "location": {"id": 0, "name": "string", "isCountry": true, "countryCode": "string"}, "badgeUrls": {}, "clanLevel": 0, "members": 0, "rank": 0, "previousRank": 0, "clanBuilderBasePoints": 0}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Top Builder Base Players in a Location
+#### Top Builder Base Players in a Location
 ```python
 api.location_players_builder_base(location_id)
 ```
-Top builder base players in a given location
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "tag": "string",
-    "name": "string",
-    "expLevel": 0,
-    "rank": 0,
-    "previousRank": 0,
-    "builderBaseTrophies": 0,
-    "clan": {
-      "tag": "string",
-      "name": "string",
-      "badgeUrls": {}
-    },
-    "builderBaseLeague": {
-      "id": 0,
-      "name": "string"
-    }
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"tag": "string", "name": "string", "expLevel": 0, "rank": 0, "previousRank": 0, "builderBaseTrophies": 0, "clan": {"tag": "string", "name": "string", "badgeUrls": {}}, "builderBaseLeague": {"id": 0, "name": "string"}}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Capital Rankings in a Location
+#### Capital Rankings in a Location
 ```python
 api.location_capital_rankings(location_id)
 ```
-Top capital rankings in a given location
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "tag": "string",
-    "name": "string",
-    "location": {
-      "id": 0,
-      "name": "string",
-      "isCountry": true,
-      "countryCode": "string"
-    },
-    "badgeUrls": {},
-    "clanLevel": 0,
-    "members": 0,
-    "rank": 0,
-    "previousRank": 0,
-    "clanCapitalPoints": 0
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"tag": "string", "name": "string", "location": {"id": 0, "name": "string", "isCountry": true, "countryCode": "string"}, "badgeUrls": {}, "clanLevel": 0, "members": 0, "rank": 0, "previousRank": 0, "clanCapitalPoints": 0}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Top Versus Clans in a Location (Deprecated)
+#### Top Versus Clans in a Location (Deprecated)
 ```python
-api.location_clan_versus(location_tag)
+api.location_clan_versus(location_id)
 ```
-> **Deprecated**: This endpoint may no longer be available. If the API call fails, a deprecation notice is returned with `error_type: "deprecated"`.
+> **Deprecated**: May return an error with `error_type: "deprecated"`.
 
-### Top Versus Players in a Location (Deprecated)
+#### Top Versus Players in a Location (Deprecated)
 ```python
-api.location_player_versus(location_tag)
+api.location_player_versus(location_id)
 ```
-> **Deprecated**: This endpoint may no longer be available. If the API call fails, a deprecation notice is returned with `error_type: "deprecated"`.
+> **Deprecated**: May return an error with `error_type: "deprecated"`.
 
+---
 
+### Leagues
 
-
-## Leagues
-
-### List Leagues
+#### List Leagues
 ```python
 api.league()
+api.league({"limit": 5})
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string",
-    "iconUrls": {}
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string", "iconUrls": {}}], "paging": {"cursors": {}}}
 ```
 </details>
 
-
-### League Information
+#### League Info
 ```python
-api.league_id(league_id)
+api.league_id("29000022")
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{
-  "id": 0,
-  "name": "string",
-  "iconUrls": {
-    "small": "string",
-    "tiny": "string",
-    "medium": "string"
-  }
-}
+```json
+{"id": 0, "name": "string", "iconUrls": {"small": "string", "tiny": "string", "medium": "string"}}
 ```
 </details>
 
-
-### List Season Leagues
+#### Legend League Seasons
 ```python
-api.league_season(league_id)
+api.league_season("29000022")
 ```
-Information is available only for Legend League
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": "string"
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": "string"}], "paging": {"cursors": {}}}
 ```
 </details>
 
-
-### League Season Ranking
+#### Legend League Season Rankings
 ```python
-api.league_season_id(league_id, season_id)
+api.league_season_id("29000022", "2025-01", {"limit": 100})
 ```
-Information is available only for Legend League. Note: `limit` must be between 100 and 25,000.
+Note: `limit` must be between 100 and 25,000.
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "tag": "string",
-    "name": "string",
-    "expLevel": 0,
-    "trophies": 0,
-    "attackWins": 0,
-    "defenseWins": 0,
-    "rank": 0,
-    "clan": {
-      "tag": "string",
-      "name": "string",
-      "badgeUrls": {}
-    },
-    "leagueTier": {
-      "id": 0,
-      "name": "string",
-      "iconUrls": {}
-    }
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"tag": "string", "name": "string", "expLevel": 0, "trophies": 0, "attackWins": 0, "defenseWins": 0, "rank": 0, "clan": {"tag": "string", "name": "string", "badgeUrls": {}}, "leagueTier": {"id": 0, "name": "string", "iconUrls": {}}}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### List Capital Leagues
+#### Capital Leagues
 ```python
 api.capitalleagues()
+api.capitalleagues_id("85000000")
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string"
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string"}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Capital League Information
-```python
-api.capitalleagues_id(league_id)
-```
-<details>
- <summary>Click to view output</summary>
-
-```text
-{
-  "id": 0,
-  "name": "string"
-}
-```
-</details>
-
-### List Builder Base Leagues
+#### Builder Base Leagues
 ```python
 api.builderbaseleagues()
+api.builderbaseleagues_id("44000000")
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string"
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string"}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### Builder Base League Information
-```python
-api.builderbaseleagues_id(league_id)
-```
-<details>
- <summary>Click to view output</summary>
-
-```text
-{
-  "id": 0,
-  "name": "string"
-}
-```
-</details>
-
-### List League Tiers
+#### League Tiers
 ```python
 api.leaguetiers()
+api.leaguetiers_id("105000001")
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string",
-    "iconUrls": {
-      "small": "string",
-      "large": "string"
-    }
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string", "iconUrls": {"small": "string", "large": "string"}}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### League Tier Information
-```python
-api.leaguetiers_id(league_tier_id)
-```
-<details>
- <summary>Click to view output</summary>
-
-```text
-{
-  "id": 0,
-  "name": "string",
-  "iconUrls": {
-    "small": "string",
-    "large": "string"
-  }
-}
-```
-</details>
-
-### List War Leagues
+#### War Leagues
 ```python
 api.warleagues()
+api.warleagues_id("48000000")
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string"
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string"}], "paging": {"cursors": {}}}
 ```
 </details>
 
-### War League Information
-```python
-api.warleagues_id(league_id)
-```
-<details>
- <summary>Click to view output</summary>
+---
 
-```text
-{
-  "id": 0,
-  "name": "string"
-}
-```
-</details>
+### Gold Pass
 
-
-
-
-## Gold Pass
-
-### Current Gold Pass Season
 ```python
 api.goldpass()
 ```
-Get information about the current gold pass season
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{
-  "startTime": "string",
-  "endTime": "string" 
-}
+```json
+{"startTime": "string", "endTime": "string"}
 ```
 </details>
 
+---
 
-## Labels
+### Labels
 
-### List Clan Labels
+#### Clan Labels
 ```python
 api.labels_clans()
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string",
-    "iconUrls": {}
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string", "iconUrls": {}}], "paging": {"cursors": {}}}
 ```
 </details>
 
-
-### List Player Labels
+#### Player Labels
 ```python
 api.labels_players()
 ```
 <details>
- <summary>Click to view output</summary>
+ <summary>Response</summary>
 
-```text
-{"items":
-[
-  {
-    "id": 0,
-    "name": "string",
-    "iconUrls": {}
-  }
-],
-"paging": {"cursors": {}}
-}
+```json
+{"items": [{"id": 0, "name": "string", "iconUrls": {}}], "paging": {"cursors": {}}}
 ```
 </details>
 
+---
+
+## Error Handling
+
+All endpoints return a dict. Errors have this structure:
+
+```python
+result = api.clan_tag("#INVALID")
+if result.get("result") == "error":
+    print(result["message"])      # Human-readable message
+    print(result["error_type"])   # "timeout", "connection", "http", "json", "retry_exhausted", "unknown"
+    print(result.get("status_code"))  # HTTP status code if applicable
+```
+
+## Pydantic Models
+
+When `use_pydantic_models=True` (requires `pip install 'cocapi[pydantic]'`), endpoints return typed model objects instead of dicts:
+
+```python
+from cocapi import CocApi, ApiConfig
+
+config = ApiConfig(use_pydantic_models=True)
+api = CocApi("token", config=config)
+
+clan = api.clan_tag("#2PP")
+print(clan.name)        # Attribute access with IDE autocompletion
+print(clan.clanLevel)
+
+player = api.players("#TAG")
+print(player.trophies)
+```
+
+Available models: `Clan`, `Player`, `ClanMember`, `League`, `Location`, `Achievement`, `ClanWar`, `GoldPassSeason`, and more. Import directly from `cocapi`.
 
 ## Credits
+
 - [All Contributors](../../contributors)
 
-*Note versions below 2.0.0 are not supported anymore*
-
-*DISCLAIMER: cocapi is not affiliated with SuperCell©.
+*cocapi is not affiliated with SuperCell.*

@@ -52,6 +52,33 @@ def should_retry_error(status_code: int) -> bool:
     return status_code == 429 or status_code >= 500
 
 
+def extract_items(result: Any) -> list[Any]:
+    """Extract items list from a paginated API response (dict or Pydantic model)."""
+    if isinstance(result, dict):
+        return result.get("items", [])
+    return getattr(result, "items", [])
+
+
+def extract_after_cursor(result: Any) -> str | None:
+    """Extract the 'after' cursor from a paginated API response (dict or Pydantic model)."""
+    if isinstance(result, dict):
+        paging = result.get("paging")
+        if not paging:
+            return None
+        cursors = paging.get("cursors")
+        if not cursors:
+            return None
+        return cursors.get("after")
+    # Pydantic model path
+    paging = getattr(result, "paging", None)
+    if not paging:
+        return None
+    cursors = getattr(paging, "cursors", None)
+    if not cursors:
+        return None
+    return getattr(cursors, "after", None)
+
+
 def format_endpoint_for_metrics(endpoint: str) -> str:
     """Format endpoint path for metrics tracking (remove dynamic parts)"""
     # Replace clan/player tags with placeholder for better grouping

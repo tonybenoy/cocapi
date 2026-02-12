@@ -3,10 +3,18 @@
 Test all cocapi endpoints against the live Clash of Clans API.
 
 Usage:
+    # With a raw API token
     uv run python scripts/test_all_endpoints.py <API_TOKEN>
     uv run python scripts/test_all_endpoints.py <API_TOKEN> --clan-tag "#2P2G0C0G"
 
-Requires a valid API token from https://developer.clashofclans.com/
+    # With developer portal credentials (auto key management)
+    uv run python scripts/test_all_endpoints.py --email you@example.com --password yourpass
+
+    # With credentials + key persistence (skip login on reruns)
+    uv run python scripts/test_all_endpoints.py --email you@example.com --password yourpass --persist
+
+Requires either a valid API token from https://developer.clashofclans.com/
+or developer portal email/password credentials.
 """
 
 import json
@@ -14,7 +22,7 @@ import sys
 import time
 from typing import Any, Dict, Optional
 
-from cocapi import CocApi
+from cocapi import ApiConfig, CocApi
 
 
 def keys_structure(obj: Any, depth: int = 0, max_depth: int = 2) -> Any:
@@ -238,6 +246,32 @@ class EndpointTester:
         self.test("labels_clans", self.api.labels_clans)
         self.test("labels_players", self.api.labels_players)
 
+        # --- PAGINATION ---
+        print("\n--- Pagination ---")
+        try:
+            members = list(self.api.paginate(self.api.clan_members, self.clan_tag, limit=5))
+            if members:
+                print(f"  [OK]       paginate(clan_members): got {len(members)} members")
+                self.ok += 1
+            else:
+                print("  [ERROR]    paginate(clan_members): empty result")
+                self.errors += 1
+        except Exception as e:
+            print(f"  [EXCEPTION] paginate(clan_members): {e}")
+            self.errors += 1
+
+        try:
+            leagues = list(self.api.paginate(self.api.league, limit=5))
+            if leagues:
+                print(f"  [OK]       paginate(league): got {len(leagues)} leagues")
+                self.ok += 1
+            else:
+                print("  [ERROR]    paginate(league): empty result")
+                self.errors += 1
+        except Exception as e:
+            print(f"  [EXCEPTION] paginate(league): {e}")
+            self.errors += 1
+
         # --- SUMMARY ---
         total = self.ok + self.errors + self.skipped
         print()
@@ -269,12 +303,15 @@ def main() -> None:
         print(__doc__)
         sys.exit(1)
 
-    token = sys.argv[1]
     clan_tag = "#2P2G0C0G"  # default: public war log
     player_tag = "#900PUCPV"
+    email: str | None = None
+    password: str | None = None
+    persist = False
+    token: str | None = None
 
-    # Parse optional args
-    args = sys.argv[2:]
+    # Parse args
+    args = sys.argv[1:]
     i = 0
     while i < len(args):
         if args[i] == "--clan-tag" and i + 1 < len(args):
@@ -283,14 +320,46 @@ def main() -> None:
         elif args[i] == "--player-tag" and i + 1 < len(args):
             player_tag = args[i + 1]
             i += 2
+        elif args[i] == "--email" and i + 1 < len(args):
+            email = args[i + 1]
+            i += 2
+        elif args[i] == "--password" and i + 1 < len(args):
+            password = args[i + 1]
+            i += 2
+        elif args[i] == "--persist":
+            persist = True
+            i += 1
         elif args[i] == "--dump":
             # handled after run
+            i += 1
+        elif not args[i].startswith("--") and token is None:
+            token = args[i]
             i += 1
         else:
             print(f"Unknown argument: {args[i]}")
             sys.exit(1)
 
-    tester = EndpointTester(token, clan_tag, player_tag)
+    # Create API instance
+    if email and password:
+        config = ApiConfig(persist_keys=persist)
+        print(f"  Logging in with credentials (persist_keys={persist})...")
+        api = CocApi.from_credentials(email, password, config=config)
+        print(f"  Authenticated. Token: {api.token[:12]}...")
+    elif token:
+        api = CocApi(token, timeout=30)
+    else:
+        print("Error: provide either <API_TOKEN> or --email/--password")
+        print(__doc__)
+        sys.exit(1)
+
+    tester = EndpointTester.__new__(EndpointTester)
+    tester.api = api
+    tester.clan_tag = clan_tag
+    tester.player_tag = player_tag
+    tester.results = {}
+    tester.ok = 0
+    tester.errors = 0
+    tester.skipped = 0
     tester.run_all()
 
     if "--dump" in sys.argv:
