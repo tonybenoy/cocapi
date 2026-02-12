@@ -199,10 +199,32 @@ def search(
     email: str | None = typer.Option(None, "--email", "-e", help=_EMAIL_HELP),
     password: str | None = typer.Option(None, "--password", "-p", help=_PASSWORD_HELP),
     limit: int = typer.Option(10, "--limit", "-l", help="Max results."),
+    war_frequency: str | None = typer.Option(
+        None, "--war-frequency", help="Filter: always, moreThanOncePerWeek, etc."
+    ),
+    location_id: int | None = typer.Option(None, "--location-id", help="Filter by location ID."),
+    min_members: int | None = typer.Option(None, "--min-members", help="Filter by min members."),
+    max_members: int | None = typer.Option(None, "--max-members", help="Filter by max members."),
+    min_clan_points: int | None = typer.Option(None, "--min-points", help="Filter by min clan points."),
+    min_clan_level: int | None = typer.Option(None, "--min-level", help="Filter by min clan level."),
+    label_ids: str | None = typer.Option(None, "--label-ids", help="Comma-separated label IDs."),
     as_json: bool = typer.Option(False, "--json", help="Output raw JSON."),
 ) -> None:
     """Search clans by name."""
-    _output(_get_api(token, email, password).clan(name, limit), as_json)
+    _output(
+        _get_api(token, email, password).clan(
+            name,
+            limit,
+            war_frequency=war_frequency,
+            location_id=location_id,
+            min_members=min_members,
+            max_members=max_members,
+            min_clan_points=min_clan_points,
+            min_clan_level=min_clan_level,
+            label_ids=label_ids,
+        ),
+        as_json,
+    )
 
 
 @app.command()
