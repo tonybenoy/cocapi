@@ -45,7 +45,7 @@ class TestSyncGetAutoRefresh:
         with patch.object(CocApi, "test", return_value={"result": "success"}):
             api = CocApi("old_token", config=ApiConfig(max_retries=1))
             api._km_email = "test@example.com"
-            api._km_password = "pass"
+            api._km_password = "pass"  # NOSONAR — fake test credential
 
         with (
             patch("httpx.get", side_effect=[_make_403_invalid_ip(), _make_200_ok()]),
@@ -72,7 +72,7 @@ class TestSyncGetAutoRefresh:
         with patch.object(CocApi, "test", return_value={"result": "success"}):
             api = CocApi("token", config=ApiConfig(max_retries=1))
             api._km_email = "test@example.com"
-            api._km_password = "pass"
+            api._km_password = "pass"  # NOSONAR — fake test credential
 
         with (
             patch("httpx.get", return_value=_make_403_invalid_ip()),
@@ -90,7 +90,7 @@ class TestSyncGetAutoRefresh:
         with patch.object(CocApi, "test", return_value={"result": "success"}):
             api = CocApi("token", config=ApiConfig(max_retries=1))
             api._km_email = "test@example.com"
-            api._km_password = "pass"
+            api._km_password = "pass"  # NOSONAR — fake test credential
 
         with (
             patch("httpx.get", return_value=_make_403_other()),
@@ -112,7 +112,7 @@ class TestSyncPostAutoRefresh:
         with patch.object(CocApi, "test", return_value={"result": "success"}):
             api = CocApi("token", config=ApiConfig(max_retries=1))
             api._km_email = "test@example.com"
-            api._km_password = "pass"
+            api._km_password = "pass"  # NOSONAR — fake test credential
 
         resp_403 = _make_403_invalid_ip()
         resp_200 = _make_response(200, {"status": "ok", "tag": "#P1"})
@@ -152,7 +152,7 @@ class TestAsyncGetAutoRefresh:
 
         core = AsyncCocApiCore("token", config)
         core._km_email = "test@example.com"
-        core._km_password = "pass"
+        core._km_password = "pass"  # NOSONAR — fake test credential
         core._km_auto_refresh = True
 
         mock_client = AsyncMock()
@@ -191,7 +191,7 @@ class TestAsyncGetAutoRefresh:
 
         core = AsyncCocApiCore("token", config)
         core._km_email = "test@example.com"
-        core._km_password = "pass"
+        core._km_password = "pass"  # NOSONAR — fake test credential
         core._km_auto_refresh = True
 
         mock_client = AsyncMock()
@@ -219,7 +219,7 @@ class TestAsyncPostAutoRefresh:
 
         core = AsyncCocApiCore("token", config)
         core._km_email = "test@example.com"
-        core._km_password = "pass"
+        core._km_password = "pass"  # NOSONAR — fake test credential
         core._km_auto_refresh = True
 
         mock_client = AsyncMock()
