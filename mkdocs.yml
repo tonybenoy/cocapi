@@ -1,0 +1,135 @@
+site_name: cocapi
+site_url: https://tonybenoy.github.io/cocapi/
+site_description: "Async & sync Python wrapper for the Clash of Clans API"
+site_author: Tony Benoy
+repo_url: https://github.com/tonybenoy/cocapi
+repo_name: tonybenoy/cocapi
+edit_uri: edit/main/docs/
+
+copyright: Copyright &copy; 2024-2026 Tony Benoy — GPL-3.0
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - section-index
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            heading_level: 2
+            members_order: source
+            docstring_style: google
+            docstring_section_style: spacy
+            merge_init_into_class: true
+            show_signature_annotations: true
+            separate_signature: true
+            signature_crossrefs: true
+            show_if_no_docstring: false
+            filters:
+              - "!^_"
+              - "^__init__$"
+              - "^__aenter__$"
+              - "^__aexit__$"
+              - "^__aiter__$"
+              - "^__anext__$"
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - def_list
+  - tables
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tonybenoy/cocapi
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/cocapi/
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Authentication: getting-started/authentication.md
+  - Guides:
+    - Configuration: guides/configuration.md
+    - Async Usage: guides/async.md
+    - Pagination & Batch: guides/pagination-batch.md
+    - Event Polling: guides/events.md
+    - Pydantic Models: guides/pydantic-models.md
+    - Middleware: guides/middleware.md
+    - Caching: guides/caching.md
+    - Metrics: guides/metrics.md
+    - CLI: guides/cli.md
+    - Error Handling: guides/error-handling.md
+  - API Reference: reference/
+  - Examples: examples.md
+  - Changelog: changelog.md
