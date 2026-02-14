@@ -36,6 +36,8 @@ T = TypeVar("T")
 
 
 class BadgeUrls(BaseModel):
+    """Clan badge image URLs in multiple sizes."""
+
     model_config = ConfigDict(extra="allow")
 
     small: str | None = None
@@ -44,6 +46,8 @@ class BadgeUrls(BaseModel):
 
 
 class IconUrls(BaseModel):
+    """Icon image URLs for leagues, labels, and other entities."""
+
     model_config = ConfigDict(extra="allow")
 
     small: str | None = None
@@ -53,6 +57,8 @@ class IconUrls(BaseModel):
 
 
 class Cursors(BaseModel):
+    """Pagination cursors for traversing list endpoints."""
+
     model_config = ConfigDict(extra="allow")
 
     before: str | None = None
@@ -60,6 +66,8 @@ class Cursors(BaseModel):
 
 
 class Paging(BaseModel):
+    """Paging metadata returned with paginated list responses."""
+
     model_config = ConfigDict(extra="allow")
 
     cursors: Cursors | None = None
@@ -75,6 +83,8 @@ class PaginatedList(BaseModel, Generic[T]):
 
 
 class Location(BaseModel):
+    """A geographic location (country or region) used for rankings."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -84,6 +94,8 @@ class Location(BaseModel):
 
 
 class Label(BaseModel):
+    """A label that can be assigned to clans or players."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -97,6 +109,8 @@ class Label(BaseModel):
 
 
 class League(BaseModel):
+    """A player's trophy league (e.g. Legend League, Titan I)."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -105,6 +119,8 @@ class League(BaseModel):
 
 
 class LeagueTier(BaseModel):
+    """A tier within a league (sub-division)."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -113,6 +129,8 @@ class LeagueTier(BaseModel):
 
 
 class CapitalLeague(BaseModel):
+    """Clan Capital league ranking."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -120,6 +138,8 @@ class CapitalLeague(BaseModel):
 
 
 class BuilderBaseLeague(BaseModel):
+    """Builder Base league ranking."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -127,6 +147,8 @@ class BuilderBaseLeague(BaseModel):
 
 
 class WarLeague(BaseModel):
+    """Clan War League tier (e.g. Champion I, Master II)."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -134,12 +156,16 @@ class WarLeague(BaseModel):
 
 
 class LeagueSeason(BaseModel):
+    """A league season identifier (e.g. ``2026-02``)."""
+
     model_config = ConfigDict(extra="allow")
 
     id: str | None = None
 
 
 class ChatLanguage(BaseModel):
+    """A clan's configured chat language."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -153,6 +179,8 @@ class ChatLanguage(BaseModel):
 
 
 class PlayerHouseElement(BaseModel):
+    """A single decorative element of a player's house."""
+
     model_config = ConfigDict(extra="allow")
 
     type: str | None = None
@@ -160,12 +188,16 @@ class PlayerHouseElement(BaseModel):
 
 
 class PlayerHouse(BaseModel):
+    """Player house decoration data."""
+
     model_config = ConfigDict(extra="allow")
 
     elements: list[PlayerHouseElement] = []
 
 
 class Troop(BaseModel):
+    """A troop in a player's army (home or builder village)."""
+
     model_config = ConfigDict(extra="allow")
 
     name: str | None = None
@@ -176,6 +208,8 @@ class Troop(BaseModel):
 
 
 class Hero(BaseModel):
+    """A hero unit (e.g. Barbarian King, Archer Queen)."""
+
     model_config = ConfigDict(extra="allow")
 
     name: str | None = None
@@ -186,6 +220,8 @@ class Hero(BaseModel):
 
 
 class HeroEquipment(BaseModel):
+    """Equipment item that can be assigned to a hero."""
+
     model_config = ConfigDict(extra="allow")
 
     name: str | None = None
@@ -195,6 +231,8 @@ class HeroEquipment(BaseModel):
 
 
 class Spell(BaseModel):
+    """A spell in a player's spell factory."""
+
     model_config = ConfigDict(extra="allow")
 
     name: str | None = None
@@ -204,6 +242,8 @@ class Spell(BaseModel):
 
 
 class Achievement(BaseModel):
+    """A player achievement with progress and star count."""
+
     model_config = ConfigDict(extra="allow")
 
     name: str | None = None
@@ -227,6 +267,8 @@ class PlayerClan(BaseModel):
 
 
 class LegendSeason(BaseModel):
+    """A single Legend League season result."""
+
     model_config = ConfigDict(extra="allow")
 
     trophies: int | None = None
@@ -235,6 +277,8 @@ class LegendSeason(BaseModel):
 
 
 class LegendStatistics(BaseModel):
+    """Legend League statistics including current, previous, and best seasons."""
+
     model_config = ConfigDict(extra="allow")
 
     legendTrophies: int | None = None
@@ -244,6 +288,8 @@ class LegendStatistics(BaseModel):
 
 
 class Player(BaseModel):
+    """Full player profile from the ``/players/{tag}`` endpoint."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -278,6 +324,8 @@ class Player(BaseModel):
 
 
 class VerifyTokenResponse(BaseModel):
+    """Response from the player token verification endpoint."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -291,6 +339,8 @@ class VerifyTokenResponse(BaseModel):
 
 
 class ClanMember(BaseModel):
+    """A member entry within a clan's member list."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -311,6 +361,8 @@ class ClanMember(BaseModel):
 
 
 class ClanCapitalDistrict(BaseModel):
+    """A district within a clan's Clan Capital."""
+
     model_config = ConfigDict(extra="allow")
 
     id: int | None = None
@@ -319,6 +371,8 @@ class ClanCapitalDistrict(BaseModel):
 
 
 class ClanCapital(BaseModel):
+    """Clan Capital data including hall level and districts."""
+
     model_config = ConfigDict(extra="allow")
 
     capitalHallLevel: int | None = None
@@ -326,6 +380,8 @@ class ClanCapital(BaseModel):
 
 
 class Clan(BaseModel):
+    """Full clan profile from the ``/clans/{tag}`` endpoint."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -392,6 +448,8 @@ class ClanSearchEntry(BaseModel):
 
 
 class WarAttack(BaseModel):
+    """A single attack in a clan war."""
+
     model_config = ConfigDict(extra="allow")
 
     order: int | None = None
@@ -403,6 +461,8 @@ class WarAttack(BaseModel):
 
 
 class WarMember(BaseModel):
+    """A clan member participating in a war."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -415,6 +475,8 @@ class WarMember(BaseModel):
 
 
 class WarClan(BaseModel):
+    """A clan's war data including members and attack summary."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -429,6 +491,8 @@ class WarClan(BaseModel):
 
 
 class ClanWar(BaseModel):
+    """Current or past clan war from the ``/clans/{tag}/currentwar`` endpoint."""
+
     model_config = ConfigDict(extra="allow")
 
     state: str | None = None
@@ -443,6 +507,8 @@ class ClanWar(BaseModel):
 
 
 class ClanWarLogEntry(BaseModel):
+    """A single entry in a clan's war log."""
+
     model_config = ConfigDict(extra="allow")
 
     result: str | None = None
@@ -460,6 +526,8 @@ class ClanWarLogEntry(BaseModel):
 
 
 class ClanWarLeagueMember(BaseModel):
+    """A member in a Clan War League group."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -468,6 +536,8 @@ class ClanWarLeagueMember(BaseModel):
 
 
 class ClanWarLeagueClan(BaseModel):
+    """A clan participating in a Clan War League group."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -478,12 +548,16 @@ class ClanWarLeagueClan(BaseModel):
 
 
 class ClanWarLeagueRound(BaseModel):
+    """A round within a Clan War League season containing war tags."""
+
     model_config = ConfigDict(extra="allow")
 
     warTags: list[str] = []
 
 
 class ClanWarLeagueGroup(BaseModel):
+    """Full Clan War League group with clans and rounds."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -499,6 +573,8 @@ class ClanWarLeagueGroup(BaseModel):
 
 
 class ClanCapitalRaidSeasonMember(BaseModel):
+    """A member's participation in a Capital Raid season."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -510,6 +586,8 @@ class ClanCapitalRaidSeasonMember(BaseModel):
 
 
 class ClanCapitalRaidSeason(BaseModel):
+    """A Clan Capital raid season with attack/defense logs and rewards."""
+
     model_config = ConfigDict(extra="allow")
 
     state: str | None = None
@@ -542,6 +620,8 @@ class ClanRankingClan(BaseModel):
 
 
 class ClanRankingEntry(BaseModel):
+    """A clan's entry in the trophy rankings leaderboard."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -556,6 +636,8 @@ class ClanRankingEntry(BaseModel):
 
 
 class ClanBuilderBaseRankingEntry(BaseModel):
+    """A clan's entry in the Builder Base rankings leaderboard."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -570,6 +652,8 @@ class ClanBuilderBaseRankingEntry(BaseModel):
 
 
 class ClanCapitalRankingEntry(BaseModel):
+    """A clan's entry in the Clan Capital rankings leaderboard."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -584,6 +668,8 @@ class ClanCapitalRankingEntry(BaseModel):
 
 
 class PlayerRankingEntry(BaseModel):
+    """A player's entry in the trophy rankings leaderboard."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -600,6 +686,8 @@ class PlayerRankingEntry(BaseModel):
 
 
 class PlayerBuilderBaseRankingEntry(BaseModel):
+    """A player's entry in the Builder Base rankings leaderboard."""
+
     model_config = ConfigDict(extra="allow")
 
     tag: str | None = None
@@ -618,6 +706,8 @@ class PlayerBuilderBaseRankingEntry(BaseModel):
 
 
 class GoldPassSeason(BaseModel):
+    """Current Gold Pass season start and end times."""
+
     model_config = ConfigDict(extra="allow")
 
     startTime: str | None = None

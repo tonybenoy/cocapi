@@ -123,7 +123,7 @@ except (ImportError, SyntaxError):
     _SCHEMAS_AVAILABLE = False
 
 # Version info
-__version__ = "4.0.0"
+__version__ = "4.0.1"
 __author__ = "Tony Benoy"
 __email__ = "me@tonybenoy.com"
 

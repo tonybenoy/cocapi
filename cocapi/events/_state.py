@@ -36,28 +36,35 @@ class PollingState:
     # --- Clan ---
 
     def get_clan(self, tag: str) -> dict[str, Any] | None:
+        """Return the last-polled clan snapshot, or None if not yet polled."""
         return self._clan_snapshots.get(tag)
 
     def set_clan(self, tag: str, data: dict[str, Any]) -> None:
+        """Store the latest clan snapshot for diffing on the next poll."""
         self._clan_snapshots[tag] = data
 
     # --- Members ---
 
     def get_members(self, tag: str) -> list[dict[str, Any]] | None:
+        """Return the last-polled member list for a clan, or None."""
         return self._member_snapshots.get(tag)
 
     def set_members(self, tag: str, members: list[dict[str, Any]]) -> None:
+        """Store the latest member list snapshot for a clan."""
         self._member_snapshots[tag] = members
 
     # --- War ---
 
     def get_war(self, tag: str) -> dict[str, Any] | None:
+        """Return the last-polled war snapshot, or None if not yet polled."""
         return self._war_snapshots.get(tag)
 
     def set_war(self, tag: str, data: dict[str, Any]) -> None:
+        """Store the latest war snapshot for diffing on the next poll."""
         self._war_snapshots[tag] = data
 
     def get_war_fsm(self, tag: str) -> WarStateMachine:
+        """Return the war state machine for a clan, creating one if needed."""
         if tag not in self._war_fsms:
             self._war_fsms[tag] = WarStateMachine()
         return self._war_fsms[tag]
@@ -65,9 +72,11 @@ class PollingState:
     # --- Player ---
 
     def get_player(self, tag: str) -> dict[str, Any] | None:
+        """Return the last-polled player snapshot, or None if not yet polled."""
         return self._player_snapshots.get(tag)
 
     def set_player(self, tag: str, data: dict[str, Any]) -> None:
+        """Store the latest player snapshot for diffing on the next poll."""
         self._player_snapshots[tag] = data
 
     # --- Poll timing ---
@@ -78,6 +87,7 @@ class PollingState:
         return (time.time() - last) >= interval
 
     def mark_polled(self, resource_key: str) -> None:
+        """Record the current time as the last poll time for a resource."""
         self._last_poll_times[resource_key] = time.time()
 
     # --- Persistence ---
