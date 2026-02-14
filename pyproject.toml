@@ -1,6 +1,6 @@
 [project]
 name = "cocapi"
-version = "4.0.0"
+version = "4.0.1"
 description = "Async & sync Python wrapper for the Clash of Clans API with auto key management"
 readme = "README.md"
 authors = [{ name = "Tony Benoy", email = "me@tonybenoy.com" }]

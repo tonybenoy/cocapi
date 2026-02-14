@@ -53,6 +53,16 @@ class EventStream:
         queue_size: int = 1000,
         persist_path: Path | str | None = None,
     ) -> None:
+        """Initialize the event stream.
+
+        Args:
+            api: A CocApi instance in async mode (inside ``async with``).
+            queue_size: Max events buffered before backpressure (0 = unlimited).
+            persist_path: Optional path for state persistence across restarts.
+
+        Raises:
+            RuntimeError: If the CocApi instance is not in async mode.
+        """
         if not api.async_mode:
             raise RuntimeError(
                 "EventStream requires CocApi in async mode. "

@@ -51,6 +51,14 @@ class BaseWatcher:
         queue: asyncio.Queue[Event],
         interval: float,
     ) -> None:
+        """Initialize the watcher.
+
+        Args:
+            api: CocApi instance in async mode.
+            state: Shared polling state for snapshot storage.
+            queue: Event queue to push detected changes to.
+            interval: Seconds between poll cycles.
+        """
         self._api = api
         self._state = state
         self._queue = queue
@@ -60,6 +68,7 @@ class BaseWatcher:
 
     @property
     def interval(self) -> float:
+        """Current poll interval in seconds."""
         return self._interval
 
     @interval.setter
@@ -69,12 +78,14 @@ class BaseWatcher:
         self._interval = value
 
     def start(self) -> None:
+        """Start the polling loop as an asyncio task."""
         if self._task is not None:
             return
         self._running = True
         self._task = asyncio.create_task(self._loop())
 
     async def stop(self) -> None:
+        """Stop the polling loop and cancel the background task."""
         self._running = False
         if self._task is not None:
             self._task.cancel()
@@ -85,6 +96,7 @@ class BaseWatcher:
             self._task = None
 
     async def _loop(self) -> None:
+        """Main poll loop: poll, enqueue events, sleep, repeat."""
         while self._running:
             try:
                 events = await self._poll_once()
@@ -103,6 +115,7 @@ class BaseWatcher:
             await asyncio.sleep(self._interval)
 
     async def _poll_once(self) -> list[Event]:
+        """Fetch data, diff against previous snapshot, and return events."""
         raise NotImplementedError
 
 
@@ -118,11 +131,22 @@ class ClanWatcher(BaseWatcher):
         interval: float = 60.0,
         track_members: bool = True,
     ) -> None:
+        """Initialize the clan watcher.
+
+        Args:
+            api: CocApi instance in async mode.
+            state: Shared polling state.
+            queue: Event queue for detected changes.
+            clan_tags: Clan tags to poll.
+            interval: Seconds between polls (default 60).
+            track_members: Whether to track member join/leave/update events.
+        """
         super().__init__(api, state, queue, interval)
         self._clan_tags = list(clan_tags)
         self._track_members = track_members
 
     async def _poll_once(self) -> list[Event]:
+        """Poll all watched clans and diff against stored snapshots."""
         events: list[Event] = []
         for tag in self._clan_tags:
             resource_key = f"clan:{tag}"
@@ -264,10 +288,20 @@ class WarWatcher(BaseWatcher):
         clan_tags: list[str],
         interval: float = 30.0,
     ) -> None:
+        """Initialize the war watcher.
+
+        Args:
+            api: CocApi instance in async mode.
+            state: Shared polling state.
+            queue: Event queue for detected changes.
+            clan_tags: Clan tags to watch for war updates.
+            interval: Seconds between polls (default 30).
+        """
         super().__init__(api, state, queue, interval)
         self._clan_tags = list(clan_tags)
 
     async def _poll_once(self) -> list[Event]:
+        """Poll current wars and detect state transitions and new attacks."""
         events: list[Event] = []
 
         for tag in self._clan_tags:
@@ -393,6 +427,17 @@ class PlayerWatcher(BaseWatcher):
         include_fields: frozenset[str] | None = None,
         exclude_fields: frozenset[str] | None = None,
     ) -> None:
+        """Initialize the player watcher.
+
+        Args:
+            api: CocApi instance in async mode.
+            state: Shared polling state.
+            queue: Event queue for detected changes.
+            player_tags: Player tags to poll.
+            interval: Seconds between polls (default 120).
+            include_fields: Only report changes to these fields.
+            exclude_fields: Ignore changes to these fields.
+        """
         super().__init__(api, state, queue, interval)
         self._player_tags = list(player_tags)
         self._include_fields = include_fields
@@ -407,6 +452,7 @@ class PlayerWatcher(BaseWatcher):
         return True
 
     async def _poll_once(self) -> list[Event]:
+        """Poll all watched players and diff against stored snapshots."""
         events: list[Event] = []
         for tag in self._player_tags:
             resource_key = f"player:{tag}"
@@ -536,12 +582,22 @@ class MaintenanceWatcher(BaseWatcher):
         interval: float = 30.0,
         probe_tag: str = "#JY9J2Y99",
     ) -> None:
+        """Initialize the maintenance watcher.
+
+        Args:
+            api: CocApi instance in async mode.
+            state: Shared polling state.
+            queue: Event queue for detected changes.
+            interval: Seconds between probes (default 30).
+            probe_tag: Player tag to probe for availability.
+        """
         super().__init__(api, state, queue, interval)
         self._probe_tag = probe_tag
         self._in_maintenance = False
         self._maintenance_start_time: float | None = None
 
     async def _poll_once(self) -> list[Event]:
+        """Probe the API and detect maintenance start/end transitions."""
         result: dict[str, Any] = await cast(
             Awaitable[dict[str, Any]], self._api.players(self._probe_tag)
         )

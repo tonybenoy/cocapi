@@ -29,6 +29,12 @@ for path in sorted(src.rglob("*.py")):
 
     with mkdocs_gen_files.open(full_doc_path, "w") as fd:
         ident = ".".join(parts)
+        if ident == "cocapi":
+            fd.write("# API Reference\n\n")
+            fd.write(
+                "Full reference for all public modules in the `cocapi` package. "
+                "Select a module from the navigation to view its documentation.\n\n"
+            )
         fd.write(f"::: {ident}\n")
 
     mkdocs_gen_files.set_edit_path(full_doc_path, path.as_posix())
