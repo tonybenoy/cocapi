@@ -376,6 +376,7 @@ class ClanCapital(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     capitalHallLevel: int | None = None
+    clanGoldSinkTotal: int | None = None  # lifetime Capital Gold
     districts: list[ClanCapitalDistrict] = []
 
 

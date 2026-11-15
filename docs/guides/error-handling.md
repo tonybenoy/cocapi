@@ -84,3 +84,36 @@ else:
     # Success
     print(result["name"])
 ```
+
+## Error Kinds and Typed Exceptions
+
+Error dicts also include `error_kind` (and `reason` when the API supplies one), which is more specific than `error_type`:
+
+| `error_kind` | Meaning |
+|---|---|
+| `maintenance` | API under maintenance (503 / `inMaintenance`) |
+| `private_war_log` | 403 on a war endpoint with a valid key |
+| `invalid_ip` | `accessDenied.invalidIp` — key not valid for this IP |
+| `access_denied` | Other 403s |
+| `not_found` / `rate_limited` / `bad_request` / `server_error` | 404 / 429 / 400 / 5xx |
+
+```python
+result = api.clan_current_war("#TAG")
+if result.get("error_kind") == "private_war_log":
+    print("War log is private")
+```
+
+To opt in to exceptions, wrap any call in `raise_for_error`:
+
+```python
+from cocapi import raise_for_error, PrivateWarLogError
+
+try:
+    war = raise_for_error(api.clan_current_war("#TAG"))
+except PrivateWarLogError:
+    ...
+```
+
+## Current War with CWL Fallback
+
+`api.clan_current_war_auto(tag)` tries `/currentwar` and, if the clan isn't in a regular war (or the war log is private), returns the clan's Clan War League war. CWL results include `"is_cwl": True` and `"war_tag"`.
