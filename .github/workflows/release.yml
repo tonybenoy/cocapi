@@ -22,7 +22,7 @@ jobs:
       uses: astral-sh/setup-uv@v3
       
     - name: Install dependencies
-      run: uv sync --dev --extra pydantic --extra cli
+      run: uv sync --locked --dev --extra pydantic --extra cli
       
     - name: Run ruff linting
       run: uv run ruff check cocapi

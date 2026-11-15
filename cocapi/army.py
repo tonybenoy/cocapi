@@ -51,7 +51,7 @@ def parse_army_link(link: str, static_data: "StaticData | None" = None) -> Army:
         code = values[0]
     else:
         code = link
-    if not code or not re.fullmatch(r"(?:[a-z][\d\-x]*)+", code):
+    if not code or not code[0].isalpha() or not re.fullmatch(r"[a-z0-9\-]+", code):
         raise ValueError(f"Invalid army code: {code!r}")
 
     army = Army()
