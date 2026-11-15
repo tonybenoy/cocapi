@@ -7,7 +7,7 @@
     <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/v/cocapi" alt="Pypi version" height="21"></a>
     <a href="https://pypi.org/project/cocapi/"><img src="https://img.shields.io/pypi/dm/cocapi" alt="PyPI Downloads" height="21"></a>
     <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python version" height="17"></a>
-    <a href="https://github.com/tonybenoy/cocapi/blob/master/LICENSE"><img src="https://img.shields.io/github/license/tonybenoy/cocapi" alt="License" height="17"></a>
+    <a href="https://github.com/tonybenoy/cocapi/blob/main/LICENSE"><img src="https://img.shields.io/github/license/tonybenoy/cocapi" alt="License" height="17"></a>
 </p>
 
 A Python wrapper for the official [Clash of Clans API](https://developer.clashofclans.com/) with full async support, automatic key management, caching, retries, and optional Pydantic models.
