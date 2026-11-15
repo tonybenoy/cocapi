@@ -89,3 +89,11 @@ def format_endpoint_for_metrics(endpoint: str) -> str:
     # Replace other IDs with placeholder
     endpoint = re.sub(r"/[0-9]+", "/{id}", endpoint)
     return endpoint
+
+
+def safe_json(response: Any) -> Any:
+    """Parse an httpx response body as JSON, returning None on failure."""
+    try:
+        return response.json()
+    except Exception:
+        return None

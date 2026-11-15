@@ -28,6 +28,7 @@ A Python wrapper for the official [Clash of Clans API](https://developer.clashof
 - **Retries** — exponential backoff for rate limits and server errors
 - **Pagination & batch** — `paginate()` auto-follows cursors, `batch()` fetches many resources at once
 - **Event polling** — real-time monitoring of clans, wars, and players with `async for` or callbacks
+- **Game data helpers** — static game data lookups, army link parsing, CWL-aware current war, typed errors, per-call cache control
 - **Pydantic models** — optional typed response objects with IDE autocompletion
 - **Middleware** — plug in custom request/response processing
 - **CLI** — `cocapi clan "#2PP"` from the terminal

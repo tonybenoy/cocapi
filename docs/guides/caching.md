@@ -55,3 +55,20 @@ print(f"Cleared {cleared} entries")
 - **Time-sensitive data** — When you need real-time accuracy (live war attacks, etc.)
 
 - **Low-memory environments** — The cache stores full response dicts in memory
+
+## Per-Call Cache and Rate-Limit Control
+
+Override caching for a single call (or block) without changing the config. Works in sync and async code:
+
+```python
+from cocapi import cache_control, without_rate_limit
+
+with cache_control(lookup=False):   # ignore cached entry, fetch fresh
+    clan = api.clan_tag("#TAG")
+
+with cache_control(update=False):   # don't store this response
+    clan = api.clan_tag("#TAG")
+
+with without_rate_limit():          # skip the async rate limiter
+    clan = await api.clan_tag("#TAG")
+```

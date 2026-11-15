@@ -15,17 +15,66 @@ from .api_methods import ApiMethods
 from .async_client import AsyncCocApiCore
 from .cache import CacheManager
 from .config import ApiConfig
+from .controls import (
+    cache_lookup_enabled,
+    cache_update_enabled,
+)
+from .errors import classify_http_error
 from .metrics import MetricsTracker
 from .middleware import MiddlewareManager
 from .models import create_dynamic_model
 from .utils import (
     build_url,
+    clean_tag,
     extract_after_cursor,
     extract_items,
     is_successful_response,
+    safe_json,
     should_retry_error,
     validate_params,
 )
+
+
+def _needs_cwl_fallback(war: Any) -> bool:
+    if not isinstance(war, dict):
+        return False
+    if war.get("result") == "error":
+        return war.get("error_kind") == "private_war_log"
+    return war.get("state") == "notInWar"
+
+
+def _cwl_candidate_tags(group: dict[str, Any]) -> list[str]:
+    """War tags from the most recent rounds that have started."""
+    rounds = [
+        [t for t in r.get("warTags", []) if t and t != "#0"]
+        for r in group.get("rounds", [])
+    ]
+    started = [r for r in rounds if r]
+    # Only the last two started rounds can be prep/in-war/just-ended
+    return [t for r in started[-2:] for t in r]
+
+
+def _pick_cwl_war(
+    wars: list[tuple[str, dict[str, Any]]], clan_tag: str
+) -> dict[str, Any] | None:
+    """Pick the clan's most relevant CWL war (in war > preparation > ended)."""
+    want = "#" + clean_tag(clan_tag).upper()
+    mine = [
+        (tag, w)
+        for tag, w in wars
+        if want in (w.get("clan", {}).get("tag"), w.get("opponent", {}).get("tag"))
+    ]
+    if not mine:
+        return None
+    priority = {"inWar": 0, "preparation": 1, "warEnded": 2}
+    tag, war = min(mine, key=lambda tw: priority.get(tw[1].get("state", ""), 3))
+    war = dict(war)
+    # Orient so that "clan" is always the requested clan
+    if war.get("opponent", {}).get("tag") == want:
+        war["clan"], war["opponent"] = war["opponent"], war["clan"]
+    war["is_cwl"] = True
+    war["war_tag"] = tag
+    return war
 
 
 class CocApi(ApiMethods):
@@ -270,7 +319,7 @@ class CocApi(ApiMethods):
         url = build_url(self.config.base_url, uri, params)
 
         # Check cache first
-        if self.config.enable_caching:
+        if self.config.enable_caching and cache_lookup_enabled():
             cached_response = self.cache.get(url, params)
             if cached_response is not None:
                 cache_hit = True
@@ -332,7 +381,7 @@ class CocApi(ApiMethods):
                     )
 
                     # Cache successful response
-                    if self.config.enable_caching:
+                    if self.config.enable_caching and cache_update_enabled():
                         self.cache.set(url, params, json_response)
 
                     # Record metrics
@@ -374,7 +423,10 @@ class CocApi(ApiMethods):
 
                     # Handle HTTP errors
                     error_response = self._handle_http_error(
-                        response.status_code, attempt
+                        response.status_code,
+                        attempt,
+                        safe_json(response),
+                        uri,
                     )
 
                     if self.config.enable_metrics:
@@ -454,7 +506,13 @@ class CocApi(ApiMethods):
             response["status_code"] = status_code
         return response
 
-    def _handle_http_error(self, status: int, attempt: int) -> dict[str, Any]:
+    def _handle_http_error(
+        self,
+        status: int,
+        attempt: int,
+        body: Any = None,
+        endpoint: str | None = None,
+    ) -> dict[str, Any]:
         """Handle HTTP error responses"""
         error_messages = {
             400: "Bad request - check your parameters",
@@ -466,12 +524,16 @@ class CocApi(ApiMethods):
         if status >= 500:
             error_messages[status] = "Server error - try again later"
 
-        error_response = {
+        error_kind, reason = classify_http_error(status, body, endpoint)
+        error_response: dict[str, Any] = {
             "result": "error",
             "message": error_messages.get(status, f"HTTP error {status}"),
+            "error_kind": error_kind,
             "error_type": "http",
             "http_status": status,
         }
+        if reason:
+            error_response["reason"] = reason
 
         return error_response
 
@@ -640,7 +702,10 @@ class CocApi(ApiMethods):
                             pass
 
                     error_response = self._handle_http_error(
-                        response.status_code, attempt
+                        response.status_code,
+                        attempt,
+                        safe_json(response),
+                        uri,
                     )
 
                     if self.config.enable_metrics:
@@ -775,6 +840,64 @@ class CocApi(ApiMethods):
         return response
 
     # Pagination
+    # ------------------------------------------------------------------
+    # Current war with automatic CWL fallback
+    # ------------------------------------------------------------------
+
+    def clan_current_war_auto(
+        self, clan_tag: str
+    ) -> dict[str, Any] | Awaitable[dict[str, Any]]:
+        """Get the clan's current war, falling back to its Clan War League war.
+
+        Tries ``/currentwar`` first. If the clan is not in a regular war (or the
+        war log is private), looks up the CWL group and returns the most relevant
+        CWL war involving the clan. CWL results include ``"is_cwl": True`` and
+        ``"war_tag"``. Private war logs return an error with
+        ``error_kind == "private_war_log"`` when no CWL war is available either.
+        """
+        if self.async_mode:
+            return self._async_current_war_auto(clan_tag)
+        return self._sync_current_war_auto(clan_tag)
+
+    def _sync_current_war_auto(self, clan_tag: str) -> dict[str, Any]:
+        war = self.clan_current_war(clan_tag)
+        assert isinstance(war, dict)
+        if not _needs_cwl_fallback(war):
+            return war
+        group = self.clan_leaguegroup(clan_tag)
+        assert isinstance(group, dict)
+        if group.get("result") == "error" or group.get("state") in (
+            None,
+            "notInWar",
+        ):
+            return war
+        wars: list[tuple[str, dict[str, Any]]] = []
+        for tag in _cwl_candidate_tags(group):
+            w = self.warleague(tag)
+            assert isinstance(w, dict)
+            if w.get("result") != "error":
+                wars.append((tag, w))
+        return _pick_cwl_war(wars, clan_tag) or war
+
+    async def _async_current_war_auto(self, clan_tag: str) -> dict[str, Any]:
+        war = await self.clan_current_war(clan_tag)  # type: ignore[misc]
+        if not _needs_cwl_fallback(war):
+            return war  # type: ignore[no-any-return]
+        group = await self.clan_leaguegroup(clan_tag)  # type: ignore[misc]
+        if group.get("result") == "error" or group.get("state") in (
+            None,
+            "notInWar",
+        ):
+            return war  # type: ignore[no-any-return]
+        tags = _cwl_candidate_tags(group)
+        results = await asyncio.gather(*(self.warleague(t) for t in tags))  # type: ignore[arg-type]
+        wars = [
+            (t, w)
+            for t, w in zip(tags, results, strict=True)
+            if w.get("result") != "error"
+        ]
+        return _pick_cwl_war(wars, clan_tag) or war  # type: ignore[no-any-return]
+
     def paginate(
         self,
         method: Callable[..., Any],

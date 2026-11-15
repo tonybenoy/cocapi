@@ -124,6 +124,7 @@ nav:
     - Async Usage: guides/async.md
     - Pagination & Batch: guides/pagination-batch.md
     - Event Polling: guides/events.md
+    - Game Data & Army Links: guides/game-data.md
     - Pydantic Models: guides/pydantic-models.md
     - Middleware: guides/middleware.md
     - Caching: guides/caching.md

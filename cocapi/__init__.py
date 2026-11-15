@@ -40,6 +40,8 @@ Async Usage:
 """
 
 # Main API class - primary interface
+# Army links, static data, event windows, error handling, per-call controls
+from .army import Army, ArmyUnit, build_army_link, parse_army_link
 from .async_client import AsyncCocApiCore, AsyncRateLimiter
 
 # Advanced components for power users
@@ -48,6 +50,25 @@ from .client import CocApi
 
 # Configuration classes
 from .config import ApiConfig, CacheEntry, RequestMetric
+from .controls import cache_control, without_rate_limit
+from .errors import (
+    AccessDeniedError,
+    BadRequestError,
+    CocApiError,
+    MaintenanceError,
+    NotFoundError,
+    PrivateWarLogError,
+    RateLimitedError,
+    ServerError,
+    raise_for_error,
+)
+from .game_time import (
+    clan_games_window,
+    is_clan_games,
+    is_raid_weekend,
+    legend_day_window,
+    raid_weekend_window,
+)
 
 # Key management (credential-based auth)
 from .key_manager import (
@@ -70,6 +91,7 @@ from .middleware import (
 
 # Utility functions
 from .models import create_dynamic_model, get_pydantic_info, validate_pydantic_available
+from .static_data import StaticData
 from .utils import build_url, clean_tag, validate_params
 
 # Pydantic response models (optional - only available when pydantic is installed)
@@ -123,7 +145,7 @@ except (ImportError, SyntaxError):
     _SCHEMAS_AVAILABLE = False
 
 # Version info
-__version__ = "4.0.1"
+__version__ = "4.1.0"
 __author__ = "Tony Benoy"
 __email__ = "me@tonybenoy.com"
 
@@ -144,6 +166,29 @@ __all__ = [
     "AsyncKeyManager",
     "KeyManagerError",
     "InvalidCredentials",
+    # Army links / static data / event windows
+    "Army",
+    "ArmyUnit",
+    "parse_army_link",
+    "build_army_link",
+    "StaticData",
+    "clan_games_window",
+    "raid_weekend_window",
+    "legend_day_window",
+    "is_clan_games",
+    "is_raid_weekend",
+    # Errors and per-call controls
+    "CocApiError",
+    "AccessDeniedError",
+    "BadRequestError",
+    "MaintenanceError",
+    "NotFoundError",
+    "PrivateWarLogError",
+    "RateLimitedError",
+    "ServerError",
+    "raise_for_error",
+    "cache_control",
+    "without_rate_limit",
     # Data structures
     "CacheEntry",
     "RequestMetric",

@@ -11,10 +11,25 @@ import httpx
 
 from .cache import CacheManager
 from .config import ApiConfig
+from .controls import (
+    cache_lookup_enabled,
+    cache_update_enabled,
+    rate_limit_skipped,
+)
+from .errors import classify_http_error
 from .metrics import MetricsTracker
 from .middleware import MiddlewareManager
 from .models import create_dynamic_model
-from .utils import build_url, is_successful_response, should_retry_error
+from .utils import build_url, is_successful_response, safe_json, should_retry_error
+
+
+def _http2_available() -> bool:
+    """HTTP/2 needs the optional ``h2`` package; fall back to HTTP/1.1 without it."""
+    try:
+        import h2  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 class AsyncRateLimiter:
@@ -105,7 +120,7 @@ class AsyncCocApiCore:
                     max_connections=self.config.max_connections,
                     max_keepalive_connections=self.config.max_keepalive_connections,
                 ),
-                http2=True,
+                http2=_http2_available(),
             )
             self._should_close_client = True
 
@@ -192,7 +207,7 @@ class AsyncCocApiCore:
         url = build_url(self.config.base_url, endpoint, params)
 
         # Check cache first
-        if self.config.enable_caching:
+        if self.config.enable_caching and cache_lookup_enabled():
             cached_response = self.cache.get(url, params)
             if cached_response is not None:
                 cache_hit = True
@@ -214,7 +229,7 @@ class AsyncCocApiCore:
                 return cached_response
 
         # Apply rate limiting
-        if self._rate_limiter:
+        if self._rate_limiter and not rate_limit_skipped():
             await self._rate_limiter.acquire()
 
         # Apply request middleware
@@ -257,7 +272,7 @@ class AsyncCocApiCore:
                     )
 
                     # Cache successful response
-                    if self.config.enable_caching:
+                    if self.config.enable_caching and cache_update_enabled():
                         self.cache.set(url, params, json_response)
 
                     # Record metrics
@@ -299,7 +314,10 @@ class AsyncCocApiCore:
 
                     # Handle HTTP errors
                     error_response = self._handle_http_error(
-                        response.status_code, attempt
+                        response.status_code,
+                        attempt,
+                        safe_json(response),
+                        endpoint,
                     )
 
                     if self.config.enable_metrics:
@@ -389,7 +407,7 @@ class AsyncCocApiCore:
         start_time = time.time()
 
         # Apply rate limiting
-        if self._rate_limiter:
+        if self._rate_limiter and not rate_limit_skipped():
             await self._rate_limiter.acquire()
 
         # Apply request middleware before building URL so middleware can modify params
@@ -472,7 +490,10 @@ class AsyncCocApiCore:
                             pass
 
                     error_response = self._handle_http_error(
-                        response.status_code, attempt
+                        response.status_code,
+                        attempt,
+                        safe_json(response),
+                        endpoint,
                     )
 
                     if self.config.enable_metrics:
@@ -537,7 +558,13 @@ class AsyncCocApiCore:
             "error_type": "retry_exhausted",
         }
 
-    def _handle_http_error(self, status: int, attempt: int) -> dict[str, Any]:
+    def _handle_http_error(
+        self,
+        status: int,
+        attempt: int,
+        body: Any = None,
+        endpoint: str | None = None,
+    ) -> dict[str, Any]:
         """Handle HTTP error responses"""
         error_messages = {
             400: "Bad request - check your parameters",
@@ -549,12 +576,16 @@ class AsyncCocApiCore:
         if status >= 500:
             error_messages[status] = "Server error - try again later"
 
-        error_response = {
+        error_kind, reason = classify_http_error(status, body, endpoint)
+        error_response: dict[str, Any] = {
             "result": "error",
             "message": error_messages.get(status, f"HTTP error {status}"),
+            "error_kind": error_kind,
             "http_status": status,
             "error_type": "http",
         }
+        if reason:
+            error_response["reason"] = reason
 
         # Determine if we should retry
         should_retry = (
